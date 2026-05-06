@@ -1,0 +1,16 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`runAllChecks — general behaviour > matches ScanResponse snapshot 1`] = `
+{
+  "overallStatus": "ok",
+  "results": [
+    {
+      "durationMs": 5,
+      "message": "all good",
+      "name": "Test",
+      "status": "ok",
+    },
+  ],
+  "timestamp": "2026-01-01T00:00:00.000Z",
+}
+`;
