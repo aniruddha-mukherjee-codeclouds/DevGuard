@@ -1,0 +1,7 @@
+{
+  "ports": [3000, 5432, 6379],
+  "requiredEnvKeys": ["DATABASE_URL", "API_KEY"],
+  "requiredNodeVersion": ">=18.0.0",
+  "processes": ["redis", "docker"],
+  "timeoutMs": 4000
+}
