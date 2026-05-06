@@ -57,7 +57,7 @@ export async function runAllChecks(options: RunOptions = {}): Promise<ScanRespon
     )
   );
 
-  for (const [i, result] of settled.entries()) {
+  settled.forEach((result, i) => {
     if (result.status === 'fulfilled') {
       results.push(result.value);
     } else {
@@ -70,7 +70,7 @@ export async function runAllChecks(options: RunOptions = {}): Promise<ScanRespon
         durationMs: 0,
       });
     }
-  }
+  });
 
   return {
     timestamp: new Date().toISOString(),

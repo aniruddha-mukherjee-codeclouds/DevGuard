@@ -52,7 +52,7 @@ export const envCheck = {
       };
     }
 
-    const allKeys = [...new Set([...keysFromFile, ...config.requiredEnvKeys])];
+    const allKeys = Array.from(new Set([...keysFromFile, ...config.requiredEnvKeys]));
 
     if (allKeys.length === 0) {
       return {
