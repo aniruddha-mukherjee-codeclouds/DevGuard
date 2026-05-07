@@ -10,7 +10,7 @@ DevGuard Web runs four checks against your local environment and presents result
 
 | Check | What It Inspects |
 |---|---|
-| **Port Check** | Which configured ports are already in use |
+| **Port Check** | Which TCP ports are currently listening on your machine |
 | **Env Check** | Whether all keys from `.env.example` are present in the environment |
 | **Node Check** | Whether your Node.js version satisfies the required semver range |
 | **Process Check** | Whether required background processes (e.g., Redis, Docker) are running |
@@ -43,7 +43,7 @@ npm install
 
 # 2. (Optional) Create a config file to override defaults
 cp devguard.config.example.json devguard.config.json
-# Edit devguard.config.json to set your ports, processes, Node version, etc.
+# Edit devguard.config.json to set your processes, Node version, etc.
 
 # 3. Start the development server
 npm run dev
@@ -63,7 +63,6 @@ If not present, all checks use hardcoded defaults. To override:
 
 ```json
 {
-  "ports": [3000, 5432, 6379],
   "requiredEnvKeys": ["DATABASE_URL", "API_KEY"],
   "requiredNodeVersion": ">=18.0.0",
   "processes": ["redis", "docker"],

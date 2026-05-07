@@ -2,7 +2,7 @@
 
 ## High-Level System Design
 
-DevGuard Web is a local developer environment inspector. It scans ports, environment variables, Node.js version, and running processes, then surfaces results in a browser dashboard.
+DevGuard Web is a local developer environment inspector. It scans listening TCP ports, environment variables, Node.js version, and running processes, then surfaces results in a browser dashboard.
 
 Next.js serves as the delivery layer only. All inspection logic lives in `/lib` as plain Node.js modules with no framework dependencies. API routes are thin wrappers. This separation makes the core logic independently testable and portable.
 
@@ -16,8 +16,8 @@ The app is designed to run on localhost. It requires Node.js runtime (not Edge) 
 /lib/types/index.ts              Shared TypeScript interfaces
 /lib/constants/defaultConfig.ts  Hardcoded fallback values
 /lib/utils/config.ts             Loads devguard.config.json, merges with defaults
-/lib/utils/system.ts             OS detection, cross-platform helpers (getRunningProcesses, getNodeVersion, isPortOpen)
-/lib/checks/portCheck.ts         Checks configured ports via net module
+/lib/utils/system.ts             OS detection, cross-platform helpers (getRunningProcesses, getNodeVersion, getListeningPorts)
+/lib/checks/portCheck.ts         Lists occupied TCP listening ports from the OS
 /lib/checks/envCheck.ts          Reads .env.example, validates keys against process.env
 /lib/checks/nodeCheck.ts         Compares Node version to required semver range
 /lib/checks/processCheck.ts      Checks if required processes are running via child_process
@@ -90,9 +90,9 @@ Frontend renders one status card per result
     {
       "name": "Port Check",
       "status": "warning",
-      "message": "1 of 3 configured ports are in use",
-      "suggestion": "Stop the process using port 3000 or change your app port",
-      "details": { "occupied": [3000], "free": [5432, 6379] },
+      "message": "Detected 2 occupied TCP listening ports",
+      "suggestion": "Stop the process using a conflicting port or change your app port before starting another service",
+      "details": { "occupied": [3000, 3001], "total": 2 },
       "durationMs": 38
     },
     {

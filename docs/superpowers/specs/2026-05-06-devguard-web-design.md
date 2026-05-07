@@ -13,7 +13,7 @@ type: project
 
 ## Overview
 
-DevGuard Web is a local developer environment inspector. It runs four checks (ports, env vars, Node version, processes) in parallel and presents results in a browser dashboard. Built with Next.js App Router, TypeScript, and a framework-agnostic `/lib` core.
+DevGuard Web is a local developer environment inspector. It runs four checks (listening TCP ports, env vars, Node version, processes) in parallel and presents results in a browser dashboard. Built with Next.js App Router, TypeScript, and a framework-agnostic `/lib` core.
 
 ---
 
@@ -77,7 +77,6 @@ interface ScanResponse {
 }
 
 interface DevGuardConfig {
-  ports: number[];              // default: [3000, 5432, 6379]
   requiredEnvKeys: string[];    // default: []
   requiredNodeVersion: string;  // default: '>=18.0.0' (semver range)
   processes: string[];          // default: ['redis', 'docker']
@@ -122,7 +121,7 @@ interface CheckModule {
 |---|---|
 | `devguard.config.json` missing | Silent — use defaults |
 | `devguard.config.json` malformed | Synthetic `Config` warning result, use defaults |
-| `ports: []` or `processes: []` | `ok`, message "No items configured to check" |
+| `processes: []` | `ok`, message "No processes configured to check" |
 | Check throws | `error` result, exception message in `details.error`, `suggestion` provided |
 | Check times out | `error` result, message includes check name and timeout duration, `suggestion` provided |
 | `status: 'error'` | `suggestion` field always present (enforced by convention) |
@@ -136,7 +135,7 @@ interface CheckModule {
 
 `lib/utils/system.ts` provides:
 - `getNodeVersion()` — returns `process.version` stripped of `v` prefix
-- `isPortOpen(port, deps)` — attempts port bind via `net.createServer`
+- `getListeningPorts(deps)` — reads currently listening TCP ports from the host OS
 - `getRunningProcesses(deps)` — runs `tasklist` (Windows) or `ps aux` (macOS/Linux), returns process name list
 
 Checks contain no `process.platform` branching. All platform logic is in `system.ts`.
@@ -148,7 +147,6 @@ Checks contain no `process.platform` branching. All platform logic is in `system
 ```ts
 // lib/constants/defaultConfig.ts
 export const defaultConfig: DevGuardConfig = {
-  ports: [3000, 5432, 6379],
   requiredEnvKeys: [],
   requiredNodeVersion: '>=18.0.0',
   processes: ['redis', 'docker'],

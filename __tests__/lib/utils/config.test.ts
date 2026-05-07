@@ -15,11 +15,11 @@ describe('loadConfig', () => {
   it('returns shallow-merged config when file is valid JSON', () => {
     const { config, warning } = loadConfig({
       fileExists: () => true,
-      readFile: () => JSON.stringify({ ports: [4000], timeoutMs: 2000 }),
+      readFile: () => JSON.stringify({ processes: ['postgres'], timeoutMs: 2000 }),
     });
-    expect(config.ports).toEqual([4000]);
+    expect(config.processes).toEqual(['postgres']);
     expect(config.timeoutMs).toBe(2000);
-    expect(config.processes).toEqual(defaultConfig.processes);
+    expect(config.requiredEnvKeys).toEqual(defaultConfig.requiredEnvKeys);
     expect(warning).toBeUndefined();
   });
 

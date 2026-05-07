@@ -52,8 +52,12 @@ describe('runAllChecks — error and timeout handling', () => {
   });
 
   describe('timeout', () => {
-    beforeEach(() => vi.useFakeTimers());
-    afterEach(() => vi.useRealTimers());
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
 
     it('produces an error result when a check exceeds timeoutMs', async () => {
       const config = { ...defaultConfig, timeoutMs: 100 };

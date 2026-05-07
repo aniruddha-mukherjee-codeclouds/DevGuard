@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Checks whether the configured ports are currently in use on localhost. Returns a single consolidated result — not one result per port — with occupied and free ports broken out in `details`.
+Lists the TCP ports that are currently in a listening state on the host machine. Returns a single consolidated result with the occupied port list in `details`.
 
-Uses Node.js `net.createServer()` to attempt binding each port. Cross-platform — no OS-specific code. All socket helpers are provided by `lib/utils/system.ts`.
+Uses OS-level process and socket inspection through `lib/utils/system.ts` instead of attempting to bind ports directly.
 
 ---
 
@@ -14,10 +14,9 @@ Receives the `DevGuardConfig` object. Relevant fields:
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `ports` | `number[]` | `[3000, 5432, 6379]` | Ports to check |
 | `timeoutMs` | `number` | `4000` | Max allowed time (enforced by runner, not this check) |
 
-System dependencies (`net`) are injected via a `deps` parameter to support unit testing without global mocks.
+System dependencies (`exec`, `platform`) are injected via a `deps` parameter to support unit testing without global mocks.
 
 ---
 
@@ -31,7 +30,7 @@ CheckResult {
   suggestion?: string,   // present on 'warning' and always on 'error'
   details: {
     occupied: number[],
-    free: number[]
+    total: number
   },
   durationMs: number
 }
@@ -39,9 +38,9 @@ CheckResult {
 
 | Status | Condition |
 |---|---|
-| `ok` | All ports are free |
-| `warning` | One or more ports are in use |
-| `error` | Check failed (socket error, invalid port, etc.) — `suggestion` always present |
+| `ok` | No listening TCP ports were detected |
+| `warning` | One or more listening TCP ports were detected |
+| `error` | Check failed (command execution, parse failure, etc.) — `suggestion` always present |
 
 ---
 
@@ -49,11 +48,10 @@ CheckResult {
 
 | Scenario | Behavior |
 |---|---|
-| `ports: []` | Returns `ok`, message: "No ports configured to check" |
-| All ports occupied | Returns `warning`, all ports listed in `details.occupied` |
-| Single port | Same logic, same result shape |
-| Port number > 65535 | Returns `error`, suggestion to fix config |
-| Port number ≤ 0 | Returns `error`, suggestion to fix config |
+| No listening ports found | Returns `ok`, message: "No occupied TCP listening ports detected" |
+| One or more ports listening | Returns `warning`, all ports listed in `details.occupied` |
+| Duplicate ports in command output | Deduplicated before returning |
+| IPv4 and IPv6 listeners | Both are parsed and normalized to port numbers |
 
 ---
 
@@ -61,14 +59,14 @@ CheckResult {
 
 | Scenario | Behavior |
 |---|---|
-| Socket creation error | `status: 'error'`, error message in `details.error`, `suggestion` provided |
+| Port listing command fails | `status: 'error'`, error message in `details.error`, `suggestion` provided |
 | Timeout | Handled by runner via `Promise.race` — returns error result with check name and timeout duration |
 
 ---
 
 ## Implementation Notes
 
-- Calls `isPortOpen(port, deps)` from `lib/utils/system.ts` for each configured port
-- Checks run concurrently via `Promise.all` within the check itself
+- Calls `getListeningPorts(deps)` from `lib/utils/system.ts`
+- Sorts and deduplicates port numbers before returning them
 - Does not access `devguard.config.json` directly — config is passed in by the runner
 - Does not catch its own errors — top-level errors propagate to the runner's central handler

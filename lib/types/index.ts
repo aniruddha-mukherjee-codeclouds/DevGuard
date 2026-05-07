@@ -16,7 +16,6 @@ export interface ScanResponse {
 }
 
 export interface DevGuardConfig {
-  ports: number[];
   requiredEnvKeys: string[];
   requiredNodeVersion: string;
   processes: string[];

@@ -1,4 +1,3 @@
-import net from 'net';
 import { exec as cpExec } from 'child_process';
 import { promisify } from 'util';
 
@@ -6,31 +5,60 @@ const execAsync = promisify(cpExec);
 
 export type ExecFn = (cmd: string) => Promise<{ stdout: string; stderr: string }>;
 
-export interface NetDeps {
-  net?: Pick<typeof net, 'createServer'>;
-}
-
 export interface ExecDeps {
   exec?: ExecFn;
+  platform?: NodeJS.Platform;
 }
 
 export function getNodeVersion(): string {
   return process.version.replace(/^v/, '');
 }
 
-export function isPortOpen(port: number, deps: NetDeps = {}): Promise<boolean> {
-  const netModule = deps.net ?? net;
-  return new Promise((resolve) => {
-    const server = netModule.createServer();
-    server.once('error', () => resolve(false));
-    server.once('listening', () => server.close(() => resolve(true)));
-    server.listen(port, '127.0.0.1');
-  });
+function extractPort(endpoint: string): number | null {
+  const match = endpoint.match(/:(\d+)$/);
+  if (!match) return null;
+
+  const port = Number(match[1]);
+  return Number.isInteger(port) ? port : null;
+}
+
+function parseWindowsListeningPorts(stdout: string): number[] {
+  return stdout
+    .split('\n')
+    .map((line) => line.trim().split(/\s+/))
+    .filter((parts) => parts[0] === 'TCP' && parts[3]?.toUpperCase() === 'LISTENING')
+    .map((parts) => extractPort(parts[1]))
+    .filter((port): port is number => port !== null);
+}
+
+function parseUnixListeningPorts(stdout: string): number[] {
+  return stdout
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.includes('LISTEN'))
+    .map((line) => {
+      const parts = line.split(/\s+/);
+      const endpoint = parts.find((part) => /:\d+$/.test(part));
+      return endpoint ? extractPort(endpoint) : null;
+    })
+    .filter((port): port is number => port !== null);
+}
+
+export async function getListeningPorts(deps: ExecDeps = {}): Promise<number[]> {
+  const execFn = deps.exec ?? execAsync;
+  const platform = deps.platform ?? process.platform;
+  const cmd = platform === 'win32' ? 'netstat -ano -p tcp' : platform === 'darwin' ? 'lsof -nP -iTCP -sTCP:LISTEN' : 'ss -ltn';
+  const { stdout } = await execFn(cmd);
+  const ports =
+    platform === 'win32' ? parseWindowsListeningPorts(stdout) : parseUnixListeningPorts(stdout);
+
+  return Array.from(new Set(ports)).sort((a, b) => a - b);
 }
 
 export async function getRunningProcesses(deps: ExecDeps = {}): Promise<string[]> {
   const execFn = deps.exec ?? execAsync;
-  const cmd = process.platform === 'win32' ? 'tasklist' : 'ps aux';
+  const platform = deps.platform ?? process.platform;
+  const cmd = platform === 'win32' ? 'tasklist' : 'ps aux';
   const { stdout } = await execFn(cmd);
   return stdout.toLowerCase().split('\n').filter(Boolean);
 }

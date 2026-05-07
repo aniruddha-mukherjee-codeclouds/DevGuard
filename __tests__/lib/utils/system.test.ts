@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { getNodeVersion, isPortOpen, getRunningProcesses } from '../../../lib/utils/system';
+import { getListeningPorts, getNodeVersion, getRunningProcesses } from '../../../lib/utils/system';
 
 describe('getNodeVersion', () => {
   it('returns version string without leading v', () => {
@@ -9,35 +9,32 @@ describe('getNodeVersion', () => {
   });
 });
 
-describe('isPortOpen', () => {
-  it('returns true when the port can be bound', async () => {
-    const mockServer = {
-      once: vi.fn((event: string, handler: () => void) => {
-        if (event === 'listening') setTimeout(handler, 0);
-        return mockServer;
-      }),
-      listen: vi.fn(),
-      close: vi.fn((cb: () => void) => cb()),
-    };
-    const mockNet = { createServer: vi.fn(() => mockServer) };
+describe('getListeningPorts', () => {
+  it('parses listening ports from Windows netstat output', async () => {
+    const mockExec = vi.fn().mockResolvedValue({
+      stdout: [
+        '  TCP    0.0.0.0:3000           0.0.0.0:0              LISTENING       6140',
+        '  TCP    [::]:5432              [::]:0                 LISTENING       9000',
+      ].join('\n'),
+      stderr: '',
+    });
 
-    const result = await isPortOpen(3001, { net: mockNet as never });
-    expect(result).toBe(true);
+    const ports = await getListeningPorts({ exec: mockExec, platform: 'win32' });
+    expect(ports).toEqual([3000, 5432]);
   });
 
-  it('returns false when the port is in use', async () => {
-    const mockServer = {
-      once: vi.fn((event: string, handler: () => void) => {
-        if (event === 'error') setTimeout(handler, 0);
-        return mockServer;
-      }),
-      listen: vi.fn(),
-      close: vi.fn(),
-    };
-    const mockNet = { createServer: vi.fn(() => mockServer) };
+  it('deduplicates and sorts listening ports from unix output', async () => {
+    const mockExec = vi.fn().mockResolvedValue({
+      stdout: [
+        'LISTEN 0      511                *:3001             *:*',
+        'LISTEN 0      511                *:3000             *:*',
+        'LISTEN 0      511                *:3001             *:*',
+      ].join('\n'),
+      stderr: '',
+    });
 
-    const result = await isPortOpen(3001, { net: mockNet as never });
-    expect(result).toBe(false);
+    const ports = await getListeningPorts({ exec: mockExec, platform: 'linux' });
+    expect(ports).toEqual([3000, 3001]);
   });
 });
 
