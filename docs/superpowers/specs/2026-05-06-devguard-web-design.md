@@ -13,7 +13,7 @@ type: project
 
 ## Overview
 
-DevGuard Web is a local developer environment inspector. It runs four checks (listening TCP ports, env vars, Node version, processes) in parallel and presents results in a browser dashboard. Built with Next.js App Router, TypeScript, and a framework-agnostic `/lib` core.
+DevGuard Web is a local developer environment inspector. It runs four checks (listening TCP ports, target project env files, Node version, processes) in parallel and presents results in a browser dashboard. Built with Next.js App Router, TypeScript, and a framework-agnostic `/lib` core.
 
 ---
 
@@ -126,6 +126,8 @@ interface CheckModule {
 | Check times out | `error` result, message includes check name and timeout duration, `suggestion` provided |
 | `status: 'error'` | `suggestion` field always present (enforced by convention) |
 | `.env.example` missing | `warning` — soft failure, not an error |
+| No `.env` / `.env.local` found | `warning` — setup appears incomplete |
+| Placeholder env value detected | `error` |
 | Process not found | `warning` — not treated as fatal |
 | Node version mismatch | `error` |
 

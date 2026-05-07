@@ -18,7 +18,7 @@ The app is designed to run on localhost. It requires Node.js runtime (not Edge) 
 /lib/utils/config.ts             Loads devguard.config.json, merges with defaults
 /lib/utils/system.ts             OS detection, cross-platform helpers (getRunningProcesses, getNodeVersion, getListeningPorts)
 /lib/checks/portCheck.ts         Lists occupied TCP listening ports from the OS
-/lib/checks/envCheck.ts          Reads .env.example, validates keys against process.env
+/lib/checks/envCheck.ts          Reads .env.example, validates keys against .env/.env.local, optionally resolves project root from a target port
 /lib/checks/nodeCheck.ts         Compares Node version to required semver range
 /lib/checks/processCheck.ts      Checks if required processes are running via child_process
 /lib/core/registry.ts            Static array of all check modules { name, run }
@@ -55,7 +55,7 @@ runAllChecks.ts
   → returns ScanResponse
     │
     ├── portCheck.run(config)      net module, cross-platform via system.ts
-    ├── envCheck.run(config)       fs.readFileSync .env.example, compares keys
+    ├── envCheck.run(config)       resolves target port to project root, then reads .env.example + project env files
     ├── nodeCheck.run(config)      getNodeVersion() helper + semver range check
     └── processCheck.run(config)   exec (tasklist / ps aux) via system.ts
     │
@@ -98,8 +98,14 @@ Frontend renders one status card per result
     {
       "name": "Env Check",
       "status": "ok",
-      "message": "All 4 required keys are present",
-      "details": { "missing": [], "present": ["DATABASE_URL", "API_KEY", "PORT", "NODE_ENV"], "total": 4 },
+      "message": "All 4 required keys are present in project env files",
+      "details": {
+        "missing": [],
+        "present": ["DATABASE_URL", "API_KEY", "PORT", "NODE_ENV"],
+        "placeholderLike": [],
+        "filesChecked": [".env", ".env.local"],
+        "total": 4
+      },
       "durationMs": 5
     },
     {

@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { getListeningPorts, getNodeVersion, getRunningProcesses } from '../../../lib/utils/system';
+import {
+  getListeningPorts,
+  getListeningProcessId,
+  getNodeVersion,
+  getProcessCommandLine,
+  getRunningProcesses,
+} from '../../../lib/utils/system';
 
 describe('getNodeVersion', () => {
   it('returns version string without leading v', () => {
@@ -35,6 +41,30 @@ describe('getListeningPorts', () => {
 
     const ports = await getListeningPorts({ exec: mockExec, platform: 'linux' });
     expect(ports).toEqual([3000, 3001]);
+  });
+});
+
+describe('getListeningProcessId', () => {
+  it('extracts the PID for a listening Windows port', async () => {
+    const mockExec = vi.fn().mockResolvedValue({
+      stdout: '  TCP    0.0.0.0:3000           0.0.0.0:0              LISTENING       6140',
+      stderr: '',
+    });
+
+    const pid = await getListeningProcessId(3000, { exec: mockExec, platform: 'win32' });
+    expect(pid).toBe(6140);
+  });
+});
+
+describe('getProcessCommandLine', () => {
+  it('returns a trimmed command line when available', async () => {
+    const mockExec = vi.fn().mockResolvedValue({
+      stdout: 'node "C:\\apps\\target\\node_modules\\next\\dist\\bin\\next" dev',
+      stderr: '',
+    });
+
+    const commandLine = await getProcessCommandLine(6140, { exec: mockExec, platform: 'win32' });
+    expect(commandLine).toContain('next');
   });
 });
 

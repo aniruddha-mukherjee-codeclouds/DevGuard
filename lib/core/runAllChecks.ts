@@ -5,6 +5,7 @@ import { loadConfig } from '../utils/config';
 interface RunOptions {
   config?: DevGuardConfig;
   checks?: CheckModule[];
+  configOverrides?: Partial<DevGuardConfig>;
 }
 
 function deriveOverallStatus(results: CheckResult[]): CheckStatus {
@@ -34,10 +35,10 @@ export async function runAllChecks(options: RunOptions = {}): Promise<ScanRespon
   let config: DevGuardConfig;
 
   if (options.config) {
-    config = options.config;
+    config = { ...options.config, ...options.configOverrides };
   } else {
     const loaded = loadConfig();
-    config = loaded.config;
+    config = { ...loaded.config, ...options.configOverrides };
     if (loaded.warning) {
       results.push({
         name: 'Config',

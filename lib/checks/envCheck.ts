@@ -1,12 +1,27 @@
 import fs from 'fs';
 import path from 'path';
 import type { CheckResult, DevGuardConfig } from '../types';
+import { getListeningProcessId, getProcessCommandLine, type ExecDeps } from '../utils/system';
 
-export interface EnvDeps {
+export interface EnvDeps extends ExecDeps {
   fileExists?: (p: string) => boolean;
   readFile?: (p: string) => string;
-  env?: Record<string, string | undefined>;
+  resolveProjectRootFromPort?: (
+    port: number
+  ) => Promise<{ projectRoot: string | null; pid: number | null; commandLine: string | null }>;
 }
+
+const DEFAULT_ENV_FILES = ['.env', '.env.local'];
+const PLACEHOLDER_PATTERNS = [
+  /^$/,
+  /^changeme$/i,
+  /^replace[-_ ]?me$/i,
+  /^your[-_ a-z0-9]*$/i,
+  /^example$/i,
+  /^example[-_ a-z0-9]*$/i,
+  /^todo$/i,
+  /^test$/i,
+];
 
 function parseEnvKeys(content: string): string[] {
   return content
@@ -17,6 +32,140 @@ function parseEnvKeys(content: string): string[] {
     .filter(Boolean);
 }
 
+function stripInlineComment(value: string): string {
+  let inSingleQuotes = false;
+  let inDoubleQuotes = false;
+
+  for (let i = 0; i < value.length; i += 1) {
+    const char = value[i];
+
+    if (char === "'" && !inDoubleQuotes) inSingleQuotes = !inSingleQuotes;
+    if (char === '"' && !inSingleQuotes) inDoubleQuotes = !inDoubleQuotes;
+
+    if (char === '#' && !inSingleQuotes && !inDoubleQuotes) {
+      return value.slice(0, i).trim();
+    }
+  }
+
+  return value.trim();
+}
+
+function normalizeValue(value: string): string {
+  const trimmed = stripInlineComment(value);
+
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+
+  return trimmed;
+}
+
+function parseEnvMap(content: string): Record<string, string> {
+  const entries = content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .map((line) => {
+      const separatorIndex = line.indexOf('=');
+      if (separatorIndex <= 0) return null;
+
+      const key = line.slice(0, separatorIndex).trim();
+      if (!key) return null;
+
+      const rawValue = line.slice(separatorIndex + 1);
+      return [key, normalizeValue(rawValue)] as const;
+    })
+    .filter((entry): entry is readonly [string, string] => entry !== null);
+
+  return Object.fromEntries(entries);
+}
+
+function isPlaceholderValue(value: string): boolean {
+  return PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(value.trim()));
+}
+
+function tokenizeCommandLine(commandLine: string): string[] {
+  const matches = commandLine.match(/"([^"]+)"|[^\s]+/g) ?? [];
+  return matches.map((token) => token.replace(/^"(.*)"$/, '$1'));
+}
+
+function looksLikeAbsolutePath(token: string): boolean {
+  return path.isAbsolute(token) || /^[A-Za-z]:\\/.test(token);
+}
+
+function findProjectRoot(candidatePath: string, fileExists: (p: string) => boolean): string | null {
+  let current = path.extname(candidatePath) ? path.dirname(candidatePath) : candidatePath;
+  const nodeModulesSegment = `${path.sep}node_modules${path.sep}`;
+  const nodeModulesIndex = current.lastIndexOf(nodeModulesSegment);
+
+  if (nodeModulesIndex >= 0) {
+    current = current.slice(0, nodeModulesIndex);
+  }
+
+  while (true) {
+    if (fileExists(path.join(current, '.env.example')) || fileExists(path.join(current, 'package.json'))) {
+      return current;
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) return null;
+    current = parent;
+  }
+}
+
+function inferProjectRootFromCommandLine(
+  commandLine: string,
+  fileExists: (p: string) => boolean
+): string | null {
+  const tokens = tokenizeCommandLine(commandLine);
+  const candidates: string[] = [];
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    const nextToken = tokens[i + 1];
+
+    if (['--dir', '--cwd', '-C'].includes(token) && nextToken && looksLikeAbsolutePath(nextToken)) {
+      candidates.push(nextToken);
+    }
+
+    if (looksLikeAbsolutePath(token)) {
+      candidates.push(token);
+    }
+  }
+
+  for (const candidate of candidates) {
+    const projectRoot = findProjectRoot(candidate, fileExists);
+    if (projectRoot) return projectRoot;
+  }
+
+  return null;
+}
+
+async function defaultResolveProjectRootFromPort(
+  port: number,
+  deps: EnvDeps,
+  fileExists: (p: string) => boolean
+): Promise<{ projectRoot: string | null; pid: number | null; commandLine: string | null }> {
+  const pid = await getListeningProcessId(port, deps);
+  if (pid === null) {
+    return { projectRoot: null, pid: null, commandLine: null };
+  }
+
+  const commandLine = await getProcessCommandLine(pid, deps);
+  if (!commandLine) {
+    return { projectRoot: null, pid, commandLine: null };
+  }
+
+  return {
+    projectRoot: inferProjectRootFromCommandLine(commandLine, fileExists),
+    pid,
+    commandLine,
+  };
+}
+
 export const envCheck = {
   name: 'Env Check',
 
@@ -24,8 +173,38 @@ export const envCheck = {
     const start = performance.now();
     const fileExists = deps.fileExists ?? ((p: string) => fs.existsSync(p));
     const readFile = deps.readFile ?? ((p: string) => fs.readFileSync(p, 'utf-8'));
-    const env = deps.env ?? process.env;
-    const examplePath = path.join(process.cwd(), '.env.example');
+    const resolveProjectRootFromPort =
+      deps.resolveProjectRootFromPort ??
+      ((port: number) => defaultResolveProjectRootFromPort(port, deps, fileExists));
+
+    let projectRoot = process.cwd();
+    let targetPid: number | null = null;
+    let targetCommandLine: string | null = null;
+
+    if (config.targetPort !== undefined) {
+      const resolved = await resolveProjectRootFromPort(config.targetPort);
+      projectRoot = resolved.projectRoot ?? '';
+      targetPid = resolved.pid;
+      targetCommandLine = resolved.commandLine;
+
+      if (!projectRoot) {
+        return {
+          name: 'Env Check',
+          status: 'warning',
+          message: `Could not resolve a project path from port ${config.targetPort}`,
+          suggestion:
+            'Start the target app directly from its project root or extend DevGuard with an explicit project path fallback',
+          details: {
+            targetPort: config.targetPort,
+            targetPid,
+            targetCommandLine,
+          },
+          durationMs: Math.round(performance.now() - start),
+        };
+      }
+    }
+
+    const examplePath = path.join(projectRoot, '.env.example');
 
     if (!fileExists(examplePath)) {
       return {
@@ -33,7 +212,16 @@ export const envCheck = {
         status: 'warning',
         message: '.env.example not found',
         suggestion: 'Create a .env.example file listing required environment variable keys',
-        details: { missing: [], present: [], total: 0 },
+        details: {
+          missing: [],
+          present: [],
+          placeholderLike: [],
+          filesChecked: [],
+          total: 0,
+          projectRoot,
+          targetPort: config.targetPort,
+          targetPid,
+        },
         durationMs: Math.round(performance.now() - start),
       };
     }
@@ -47,7 +235,13 @@ export const envCheck = {
         status: 'error',
         message: 'Failed to read .env.example',
         suggestion: 'Check file permissions for .env.example',
-        details: { error: (err as Error).message },
+        details: {
+          error: (err as Error).message,
+          filesChecked: ['.env.example'],
+          projectRoot,
+          targetPort: config.targetPort,
+          targetPid,
+        },
         durationMs: Math.round(performance.now() - start),
       };
     }
@@ -59,31 +253,112 @@ export const envCheck = {
         name: 'Env Check',
         status: 'ok',
         message: 'No keys defined in .env.example',
-        details: { missing: [], present: [], total: 0 },
+        details: {
+          missing: [],
+          present: [],
+          placeholderLike: [],
+          filesChecked: [],
+          total: 0,
+          projectRoot,
+          targetPort: config.targetPort,
+          targetPid,
+        },
         durationMs: Math.round(performance.now() - start),
       };
     }
 
-    const missing = allKeys.filter((k) => !(k in env));
-    const present = allKeys.filter((k) => k in env);
+    const filesChecked = DEFAULT_ENV_FILES.filter((filename) =>
+      fileExists(path.join(projectRoot, filename))
+    );
+
+    if (filesChecked.length === 0) {
+      return {
+        name: 'Env Check',
+        status: 'warning',
+        message: 'No env files found for the target project',
+        suggestion: 'Create .env or .env.local with the required keys from .env.example',
+        details: {
+          missing: allKeys,
+          present: [],
+          placeholderLike: [],
+          filesChecked,
+          total: allKeys.length,
+          projectRoot,
+          targetPort: config.targetPort,
+          targetPid,
+        },
+        durationMs: Math.round(performance.now() - start),
+      };
+    }
+
+    let mergedEnv: Record<string, string> = {};
+
+    try {
+      for (const filename of filesChecked) {
+        const filePath = path.join(projectRoot, filename);
+        mergedEnv = { ...mergedEnv, ...parseEnvMap(readFile(filePath)) };
+      }
+    } catch (err) {
+      return {
+        name: 'Env Check',
+        status: 'error',
+        message: 'Failed to read project env files',
+        suggestion: 'Check file permissions for .env and .env.local',
+        details: {
+          error: (err as Error).message,
+          filesChecked,
+          projectRoot,
+          targetPort: config.targetPort,
+          targetPid,
+        },
+        durationMs: Math.round(performance.now() - start),
+      };
+    }
+
+    const missing = allKeys.filter((k) => !(k in mergedEnv));
+    const placeholderLike = allKeys.filter((k) => k in mergedEnv && isPlaceholderValue(mergedEnv[k]));
+    const present = allKeys.filter((k) => k in mergedEnv && !placeholderLike.includes(k));
     const durationMs = Math.round(performance.now() - start);
 
-    if (missing.length === 0) {
+    if (missing.length === 0 && placeholderLike.length === 0) {
       return {
         name: 'Env Check',
         status: 'ok',
-        message: `All ${allKeys.length} required keys are present`,
-        details: { missing, present, total: allKeys.length },
+        message: `All ${allKeys.length} required keys are present in project env files`,
+        details: {
+          missing,
+          present,
+          placeholderLike,
+          filesChecked,
+          total: allKeys.length,
+          projectRoot,
+          targetPort: config.targetPort,
+          targetPid,
+        },
         durationMs,
       };
     }
 
+    const issueCount = missing.length + placeholderLike.length;
+
     return {
       name: 'Env Check',
       status: 'error',
-      message: `${missing.length} of ${allKeys.length} required keys are missing`,
-      suggestion: `Add the following keys to your environment: ${missing.join(', ')}`,
-      details: { missing, present, total: allKeys.length },
+      message: `${issueCount} env configuration issue${issueCount === 1 ? '' : 's'} found`,
+      suggestion:
+        missing.length > 0
+          ? `Add the missing keys to .env or .env.local: ${missing.join(', ')}`
+          : `Replace placeholder values in .env or .env.local: ${placeholderLike.join(', ')}`,
+      details: {
+        missing,
+        present,
+        placeholderLike,
+        filesChecked,
+        total: allKeys.length,
+        projectRoot,
+        targetPort: config.targetPort,
+        targetPid,
+      },
       durationMs,
     };
   },

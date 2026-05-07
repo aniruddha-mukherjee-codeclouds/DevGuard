@@ -20,6 +20,7 @@ export interface DevGuardConfig {
   requiredNodeVersion: string;
   processes: string[];
   timeoutMs: number;
+  targetPort?: number;
 }
 
 export interface CheckModule {

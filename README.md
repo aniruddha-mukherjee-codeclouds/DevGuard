@@ -11,7 +11,7 @@ DevGuard Web runs four checks against your local environment and presents result
 | Check | What It Inspects |
 |---|---|
 | **Port Check** | Which TCP ports are currently listening on your machine |
-| **Env Check** | Whether all keys from `.env.example` are present in the environment |
+| **Env Check** | Whether all keys from `.env.example` are present in the target project's `.env` files, optionally resolved from a target port |
 | **Node Check** | Whether your Node.js version satisfies the required semver range |
 | **Process Check** | Whether required background processes (e.g., Redis, Docker) are running |
 
@@ -51,6 +51,8 @@ npm run dev
 # 4. Open http://localhost:3000 and click "Run Scan"
 ```
 
+To target another local app for Env Check, enter its port in the `Env Target Port` field before running the scan.
+
 ### Run Tests
 
 ```bash
@@ -81,7 +83,7 @@ PORT=
 NODE_ENV=
 ```
 
-The Env Check validates that every key listed here is present in your actual environment.
+The Env Check validates that every key listed here is present in the target project's `.env` or `.env.local` file, and flags placeholder-like values such as `changeme`. When you provide an `Env Target Port`, DevGuard attempts to resolve the project root from the process listening on that port.
 
 ---
 
