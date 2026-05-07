@@ -1,206 +1,124 @@
 ---
-name: DevGuard Web — Design Spec
-description: Full design for a Next.js-based developer environment inspector with cross-platform checks for ports, env vars, Node version, and processes
+name: DevGuard Web - Design Spec
+description: Current design snapshot for the local developer environment inspector
 type: project
 ---
 
-# DevGuard Web — Design Spec
+# DevGuard Web - Design Spec
 
-**Date:** 2026-05-06
-**Status:** Approved
+**Date:** 2026-05-07
+**Status:** Active
 
----
+## Product Summary
 
-## Overview
+DevGuard Web is a local-only developer environment inspector built with Next.js App Router. It helps a developer answer one practical question quickly:
 
-DevGuard Web is a local developer environment inspector. It runs four checks (listening TCP ports, target project env files, Node version, processes) in parallel and presents results in a browser dashboard. Built with Next.js App Router, TypeScript, and a framework-agnostic `/lib` core.
+`Is the project running on this local port ready, compatible, and free of obvious machine-level conflicts?`
 
----
+The current product centers on:
 
-## Architecture
+- target-port-driven project resolution
+- machine-level port visibility
+- env-file validation against `.env.example`
+- Node compatibility against explicit or inferred project requirements
+- user-selected process checks
 
-### Constraints
-- Next.js used for UI and API routes only — no business logic in routes or components
-- All check logic in `/lib` as pure Node.js modules
-- API routes are thin wrappers over `runAllChecks()`
-- Node.js runtime only (not Edge) — requires `net`, `fs`, `child_process`
-- App runs locally on `localhost`
+## Current UX
 
-### Folder Structure
+- user enters a target port such as `3000`
+- user selects any relevant supporting processes
+- user runs the scan
+- results appear as summary cards
+- clicking `Show details` opens a modal with richer, structured detail
 
-```
-/app
-  /api/scan/route.ts           GET endpoint — thin wrapper only
-  /page.tsx                    Dashboard UI
-  /layout.tsx
+The UI no longer renders raw JSON for result details.
 
-/lib
-  /types/index.ts              CheckResult, ScanResponse, DevGuardConfig
-  /constants/defaultConfig.ts  Hardcoded fallback values
-  /utils
-    /config.ts                 Loads devguard.config.json, merges with defaults
-    /system.ts                 OS detection, cross-platform helpers
-  /checks
-    /portCheck.ts
-    /envCheck.ts
-    /nodeCheck.ts
-    /processCheck.ts
-  /core
-    /registry.ts               Static array of { name, run } check modules
-    /runAllChecks.ts           Config loading, parallel execution, error wrapping
+## Current Architecture Constraints
 
-/devguard.config.json          Optional user config (gitignored)
-/devguard.config.example.json  Example config committed to repo
-/.env.example                  Required env keys reference
-```
+- Next.js is used only for the dashboard and API route
+- business logic lives in `/lib`
+- API route runs on Node.js runtime
+- cross-platform system inspection goes through `lib/utils/system.ts`
+- port-to-project resolution goes through `lib/utils/projectTarget.ts`
 
----
+## Current Check Definitions
 
-## Types
+### Port Check
 
-```ts
-type CheckStatus = 'ok' | 'warning' | 'error';
+- lists all listening TCP ports
+- shows process name and PID per port
+- marks the chosen target port in the full occupied-port list
+- returns:
+  - `ok` if target port is free
+  - `ok` if target port belongs to the resolved target project
+  - `error` if target port is occupied by another process
 
-interface CheckResult {
-  name: string;
-  status: CheckStatus;
-  message: string;
-  suggestion?: string;          // required when status is 'error'
-  details?: Record<string, unknown>;
-  durationMs: number;
-}
+### Env Check
 
-interface ScanResponse {
-  timestamp: string;            // ISO 8601
-  overallStatus: CheckStatus;   // derived: error > warning > ok
-  results: CheckResult[];
-}
+- resolves the target project from the chosen port when possible
+- reads `.env.example`, `.env`, `.env.local`
+- merges project env files
+- reports missing and placeholder-like values
 
-interface DevGuardConfig {
-  requiredEnvKeys: string[];    // default: []
-  processes: string[];          // default: ['redis', 'docker']
-  timeoutMs: number;            // default: 4000
-  targetPort?: number;          // optional port used to resolve the target project
-}
-```
+### Node Check
 
----
+- compares current machine Node version to the target project's requirement
+- looks for explicit version metadata first
+- falls back to installed framework/tooling package engine metadata when necessary
 
-## Check Module Interface
+### Process Check
 
-Each check exports a plain object:
+- checks whether selected process names are present in the OS process list
+- built-in options come from `lib/constants/processOptions.ts`
+- custom process names can be added from the UI
 
-```ts
-interface CheckModule {
-  name: string;
-  run: (config: DevGuardConfig, deps?: SystemDeps) => Promise<CheckResult>;
+## Current Config Model
+
+Optional file: `devguard.config.json`
+
+Supported fields:
+
+```json
+{
+  "requiredEnvKeys": [],
+  "processes": [],
+  "timeoutMs": 4000
 }
 ```
 
-`deps` carries injected system dependencies (`fs`, `net`, `exec`, `getNodeVersion`) for testability. Production code passes real implementations; tests pass mocks.
+Important:
 
----
+- `targetPort` is request-driven
+- UI process selection can override `processes`
+- Node version is not configured here
 
-## Runner Behaviour
+## API Shape
 
-`runAllChecks()`:
-1. Calls `config.ts` once — loads and merges `devguard.config.json` with defaults
-2. If config file is malformed, prepends a synthetic `CheckResult` (`name: 'Config'`, `status: 'warning'`) and uses defaults
-3. Iterates over `registry` array
-4. Each check runs inside `Promise.race([check.run(config), timeout(config.timeoutMs)])`
-5. Each race is wrapped in try/catch — exceptions produce an error `CheckResult` without affecting other checks
-6. Timeout error message format: `'<checkName> timed out after <timeoutMs>ms'`
-7. Derives `overallStatus`: `error` if any result is error, `warning` if any is warning, else `ok`
-8. Returns `ScanResponse`
+`GET /api/scan`
 
----
+Query params:
 
-## Error Handling Rules
+- `targetPort`
+- `processes`
 
-| Scenario | Result |
-|---|---|
-| `devguard.config.json` missing | Silent — use defaults |
-| `devguard.config.json` malformed | Synthetic `Config` warning result, use defaults |
-| `processes: []` | `ok`, message "No processes configured to check" |
-| Check throws | `error` result, exception message in `details.error`, `suggestion` provided |
-| Check times out | `error` result, message includes check name and timeout duration, `suggestion` provided |
-| `status: 'error'` | `suggestion` field always present (enforced by convention) |
-| `.env.example` missing | `warning` — soft failure, not an error |
-| No `.env` / `.env.local` found | `warning` — setup appears incomplete |
-| Placeholder env value detected | `error` |
-| Process not found | `warning` — not treated as fatal |
-| Node version mismatch | `error` |
+Example:
 
----
-
-## OS Compatibility
-
-`lib/utils/system.ts` provides:
-- `getNodeVersion()` — returns `process.version` stripped of `v` prefix
-- `getListeningPorts(deps)` — reads currently listening TCP ports from the host OS
-- `getRunningProcesses(deps)` — runs `tasklist` (Windows) or `ps aux` (macOS/Linux), returns process name list
-
-Checks contain no `process.platform` branching. All platform logic is in `system.ts`.
-
----
-
-## Default Config
-
-```ts
-// lib/constants/defaultConfig.ts
-export const defaultConfig: DevGuardConfig = {
-  requiredEnvKeys: [],
-  processes: ['redis', 'docker'],
-  timeoutMs: 4000,
-};
+```txt
+/api/scan?targetPort=3000&processes=redis,docker
 ```
 
----
+## Testing Model
 
-## API
+- Vitest
+- dependency injection for system-facing code
+- per-check tests plus runner tests
+- current suite covers Node fallback behavior and target-port ownership behavior
 
-### `GET /api/scan`
+## Design Intent
 
-- Runtime: `nodejs` (export `const runtime = 'nodejs'`)
-- Calls `runAllChecks()`
-- Returns `200` with `ScanResponse` on success
-- Returns `500` with `{ error, message }` if runner itself fails catastrophically
+The project is intentionally optimized for local developer clarity:
 
----
-
-## Frontend
-
-Minimal dashboard:
-- "Run Scan" button triggers `GET /api/scan`
-- Loading state while scan runs
-- One card per `CheckResult` — shows name, status badge (`ok`/`warning`/`error`), message
-- Expandable section per card for `details` and `suggestion`
-- `overallStatus` shown as a banner at the top
-- Tailwind CSS for styling — no UI library dependency
-
----
-
-## Testing
-
-**Framework:** Vitest
-
-**Approach:** Dependency injection for all system modules (`fs`, `net`, `exec`, `getNodeVersion`). No global mocks.
-
-**Required test cases:**
-- Each check: happy path, empty config array, edge cases from module docs
-- `nodeCheck`: uses mocked `getNodeVersion()` helper — never mocks `process.version` directly
-- Runner: all pass, one throws, one times out, empty registry
-- `overallStatus` aggregation: all ok, mixed, all error
-- One snapshot test for `ScanResponse` shape
-- Assertion that every `'error'` result has a non-empty `suggestion`
-- `config.ts`: valid JSON, malformed JSON, missing file
-
----
-
-## Out of Scope
-
-- Authentication / access control (local tool only)
-- Persistent scan history
-- CI integration / remote scanning
-- Plugin system for custom checks
-- Real-time updates (WebSocket / SSE)
+- explain what is running
+- point at the likely target project
+- keep results structured and readable
+- avoid false conflict reports when the target project is already using its own port

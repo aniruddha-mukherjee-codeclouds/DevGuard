@@ -1,149 +1,204 @@
-# DevGuard Web — Architecture
+# DevGuard Web - Architecture
 
-## High-Level System Design
+## Overview
 
-DevGuard Web is a local developer environment inspector. It scans listening TCP ports, environment variables, Node.js version, and running processes, then surfaces results in a browser dashboard.
+DevGuard Web is a local developer environment inspector built with Next.js. The UI and API layer live in the App Router, while all inspection logic lives in framework-agnostic modules under `lib`.
 
-Next.js serves as the delivery layer only. All inspection logic lives in `/lib` as plain Node.js modules with no framework dependencies. API routes are thin wrappers. This separation makes the core logic independently testable and portable.
+The project currently revolves around a target-app workflow:
 
-The app is designed to run on localhost. It requires Node.js runtime (not Edge) to access `net`, `fs`, and `child_process`.
+- the user enters a target port in the dashboard
+- DevGuard resolves the process listening on that port
+- DevGuard tries to infer the target project root from that process command line
+- Env Check and Node Check use that resolved project as their inspection target
 
----
+Port Check and Process Check still inspect the current machine state, but they also incorporate the user-supplied target port when present.
 
-## Module Breakdown
+## High-Level Design
 
-```
-/lib/types/index.ts              Shared TypeScript interfaces
-/lib/constants/defaultConfig.ts  Hardcoded fallback values
-/lib/utils/config.ts             Loads devguard.config.json, merges with defaults
-/lib/utils/system.ts             OS detection, cross-platform helpers (getRunningProcesses, getNodeVersion, getListeningPorts)
-/lib/checks/portCheck.ts         Lists occupied TCP listening ports from the OS
-/lib/checks/envCheck.ts          Reads .env.example, validates keys against .env/.env.local, optionally resolves project root from a target port
-/lib/checks/nodeCheck.ts         Compares system Node version to the target project's declared requirement
-/lib/checks/processCheck.ts      Checks whether the user-selected process targets are running via child_process
-/lib/core/registry.ts            Static array of all check modules { name, run }
-/lib/core/runAllChecks.ts        Loads config once, runs registry in parallel with timeout + error wrapping
-/app/api/scan/route.ts           GET /api/scan — calls runAllChecks, returns JSON
-/app/page.tsx                    Dashboard UI — Run Scan button + results
-```
-
----
-
-## Data Flow
-
-```
-Browser: "Run Scan" clicked
-    │
-    ▼
-GET /api/scan
-    │
-    ▼
-route.ts
-  → calls runAllChecks()
-  → serializes ScanResponse to JSON
-    │
-    ▼
-runAllChecks.ts
-  → loads config once (config.ts)
-  → imports registry (static array of 4 checks)
-  → Promise.allSettled(
-      registry.map(check =>
-        Promise.race([check.run(config), timeout(config.timeoutMs)])
-      )
-    )
-  → derives overallStatus from all results
-  → returns ScanResponse
-    │
-    ├── portCheck.run(config)      net module, cross-platform via system.ts
-    ├── envCheck.run(config)       resolves target port to project root, then reads .env.example + project env files
-    ├── nodeCheck.run(config)      getNodeVersion() helper + semver range check
-    └── processCheck.run(config)   exec (tasklist / ps aux) via system.ts using user-selected process targets
-    │
-    ▼
-Each check returns CheckResult { name, status, message, suggestion?, details?, durationMs }
-    │
-    ▼
-ScanResponse { timestamp, overallStatus, results[] }
-    │
-    ▼
-Frontend renders one status card per result
+```txt
+Browser
+  -> GET /api/scan?targetPort=3000&processes=redis,docker
+  -> app/api/scan/route.ts
+  -> lib/core/runAllChecks.ts
+  -> registry of checks
+     - portCheck
+     - envCheck
+     - nodeCheck
+     - processCheck
+  -> JSON response
+  -> app/page.tsx summary cards
+  -> app/components/ResultCard.tsx modal details
 ```
 
-**Error isolation:** `runAllChecks` wraps each `Promise.race` in try/catch. A check that throws or times out produces an error `CheckResult` without affecting the others.
+## Responsibilities By Layer
 
-**Config parse failure:** If `devguard.config.json` exists but is malformed, a synthetic `CheckResult` (`name: 'Config'`, `status: 'warning'`) is prepended to results. Defaults are used for all checks.
+### App Layer
 
----
+- `app/page.tsx`
+  - collects `targetPort`
+  - collects selected process targets
+  - calls `/api/scan`
+  - renders overall status and result cards
 
-## API Structure
+- `app/components/ResultCard.tsx`
+  - renders human-readable details for each check
+  - opens details in a centered modal
+  - avoids raw JSON output in the UI
 
-### `GET /api/scan`
+- `app/api/scan/route.ts`
+  - parses `targetPort`
+  - parses `processes`
+  - passes request-driven overrides to the runner
 
-**Runtime:** Node.js (not Edge)
+### Core Layer
 
-**Success response — `200 OK`:**
-```json
-{
-  "timestamp": "2026-05-06T10:00:00.000Z",
-  "overallStatus": "warning",
-  "results": [
-    {
-      "name": "Port Check",
-      "status": "warning",
-      "message": "Detected 2 occupied TCP listening ports",
-      "suggestion": "Stop the process using a conflicting port or change your app port before starting another service",
-      "details": { "occupied": [3000, 3001], "total": 2 },
-      "durationMs": 38
-    },
-    {
-      "name": "Env Check",
-      "status": "ok",
-      "message": "All 4 required keys are present in project env files",
-      "details": {
-        "missing": [],
-        "present": ["DATABASE_URL", "API_KEY", "PORT", "NODE_ENV"],
-        "placeholderLike": [],
-        "filesChecked": [".env", ".env.local"],
-        "total": 4
-      },
-      "durationMs": 5
-    },
-    {
-      "name": "Node Check",
-      "status": "ok",
-      "message": "Node v20.11.0 satisfies >=18.0.0",
-      "details": { "current": "20.11.0", "required": ">=18.0.0", "satisfied": true },
-      "durationMs": 1
-    },
-    {
-      "name": "Process Check",
-      "status": "warning",
-      "message": "1 of 2 configured processes not found",
-      "suggestion": "Start redis-server or remove it from devguard.config.json",
-      "details": { "running": ["docker"], "missing": ["redis"] },
-      "durationMs": 112
-    }
-  ]
+- `lib/core/registry.ts`
+  - static ordered array of checks
+
+- `lib/core/runAllChecks.ts`
+  - loads optional config once
+  - applies request-level overrides
+  - runs checks in parallel
+  - wraps each check with a timeout
+  - isolates failures into per-check error results
+  - derives `overallStatus`
+
+### Check Layer
+
+- `lib/checks/portCheck.ts`
+  - enumerates listening ports
+  - marks the chosen target port
+  - reports whether the target port is free, owned by the target project, or occupied by another process
+
+- `lib/checks/envCheck.ts`
+  - resolves the target project root from port when possible
+  - reads `.env.example`
+  - validates `.env` and `.env.local`
+  - flags missing and placeholder-like values
+
+- `lib/checks/nodeCheck.ts`
+  - resolves the target project root from port when possible
+  - compares the current Node version to project requirements
+  - falls back to framework/toolchain package metadata when no explicit version file exists
+
+- `lib/checks/processCheck.ts`
+  - checks whether the developer-selected process names appear in the OS process list
+
+### Utility Layer
+
+- `lib/utils/system.ts`
+  - cross-platform process and port inspection
+  - OS-specific command execution lives here
+
+- `lib/utils/projectTarget.ts`
+  - resolves a port to a PID
+  - resolves a PID to a command line
+  - infers a likely project root from command-line paths
+
+- `lib/utils/config.ts`
+  - reads optional `devguard.config.json`
+  - merges it with defaults
+
+## Current Config Model
+
+`DevGuardConfig` currently contains:
+
+```ts
+interface DevGuardConfig {
+  requiredEnvKeys: string[];
+  processes: string[];
+  timeoutMs: number;
+  targetPort?: number;
 }
 ```
 
-**Error response — `500 Internal Server Error`:**
-```json
-{ "error": "Internal server error", "message": "Unexpected failure in scan runner" }
+Important details:
+
+- `targetPort` is usually provided at request time from the dashboard
+- `processes` may come from the optional config file, but the UI selection can override it
+- Node requirements are not read from config
+
+## Current Data Flow
+
+```txt
+User enters target port and process targets
+  -> HomePage builds query params
+  -> GET /api/scan
+  -> route.ts parses query params
+  -> runAllChecks({ configOverrides })
+  -> loadConfig()
+  -> merge defaults + file config + request overrides
+  -> run registry in parallel with Promise.race timeout guards
+  -> return ScanResponse
+  -> UI renders cards
+  -> Details open in a modal
 ```
 
----
+## Status Semantics
+
+### Overall Status
+
+- `error` if any check returns `error`
+- `warning` if no errors but at least one warning exists
+- `ok` otherwise
+
+### Per-Check Status
+
+- Port Check:
+  - `ok` for free target port
+  - `ok` for target port already owned by the resolved target project
+  - `error` for target port occupied by another process
+  - `warning` only in the no-target broad machine-state case when occupied ports are found
+
+- Env Check:
+  - `ok` when required keys are present and not placeholder-like
+  - `warning` when target resolution fails, `.env.example` is missing, or no env files are found
+  - `error` for missing keys, placeholder values, or file read failures
+
+- Node Check:
+  - `ok` when current Node satisfies explicit or inferred project requirement
+  - `warning` when no usable requirement can be found or the target project cannot be resolved
+  - `error` for incompatibility, malformed version metadata, or metadata read failures
+
+- Process Check:
+  - `ok` when every selected process is found
+  - `warning` when some selected processes are missing
+  - `error` when process listing fails
+
+## API
+
+### `GET /api/scan`
+
+Query params:
+
+- `targetPort`
+- `processes`
+
+Example:
+
+```txt
+/api/scan?targetPort=3000&processes=redis,docker
+```
+
+The route runs on `runtime = 'nodejs'`.
+
+## UI Model
+
+The current dashboard is intentionally lightweight and local-tool oriented:
+
+- top control row for target port and scan action
+- process selection grid with built-in service presets
+- custom process input
+- overall summary bar
+- two-column result grid on larger screens
+- modal-based detail views with scrollable content and blurred backdrop
 
 ## Tradeoffs
 
-| Decision | Chosen | Alternative | Reason |
-|---|---|---|---|
-| Framework coupling | `/lib` isolated from Next.js | Logic inside routes | Testability; framework portability |
-| Parallelism | `Promise.allSettled` | Sequential | Speed; one failure doesn't block others |
-| Error handling | Central in runner | Per-check try/catch | Checks stay clean; consistent error shape |
-| Timeout | `Promise.race` per check | Global scan timeout | Per-check granularity; better error messages |
-| Config | File + hardcoded defaults | Env vars only | Supports arrays; readable; no shell escaping |
-| Registry | Static array in `registry.ts` | Dynamic FS discovery | Explicit, fully typed, zero magic |
-| OS compat | `system.ts` abstraction | Inline `process.platform` | Single place to update; checks stay clean |
-| Testing | Vitest + DI for system deps | Jest + global mocks | Faster; ESM-native; DI avoids global state |
-| Node version | Semver range (`>=18`) | Exact version pin | Flexible; matches real-world `.nvmrc` patterns |
+| Decision | Current Choice | Why |
+|---|---|---|
+| Target discovery | Resolve project from port | Matches how developers think about running local apps |
+| Node compatibility | Explicit files first, framework fallback second | Useful even when projects omit `.nvmrc` or `engines.node` |
+| Port ownership | Treat target-project ownership as healthy | More developer-friendly than flagging your own running app as a conflict |
+| Process selection | UI-driven | Different projects care about different dependencies |
+| Detail rendering | Custom UI + modal | Easier to read than raw JSON and does not disturb grid layout |

@@ -2,71 +2,95 @@
 
 ## Purpose
 
-Lists the TCP ports that are currently in a listening state on the host machine. Returns a single consolidated result with the occupied port list in `details`.
+Inspect listening TCP ports on the host machine and present them in a developer-friendly way.
 
-Uses OS-level process and socket inspection through `lib/utils/system.ts` instead of attempting to bind ports directly.
+This module does two jobs:
 
----
+1. list all occupied listening TCP ports and their owning processes
+2. evaluate an optional `targetPort` as either:
+   - available
+   - already owned by the resolved target project
+   - occupied by another process
+
+It does not probe ports by binding sockets. It reads the OS listener table through `lib/utils/system.ts`.
 
 ## Inputs
 
-Receives the `DevGuardConfig` object. Relevant fields:
+Receives `DevGuardConfig`.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `timeoutMs` | `number` | `4000` | Max allowed time (enforced by runner, not this check) |
+Relevant fields:
 
-System dependencies (`exec`, `platform`) are injected via a `deps` parameter to support unit testing without global mocks.
+| Field | Type | Meaning |
+|---|---|---|
+| `targetPort` | `number | undefined` | Optional port selected in the dashboard |
+| `timeoutMs` | `number` | Enforced by the runner, not by this module |
 
----
+Dependency injection:
+
+- `exec`
+- `platform`
+- optional `resolveProjectRootFromPort`
 
 ## Outputs
 
+Typical details shape:
+
 ```ts
-CheckResult {
-  name: 'Port Check',
-  status: 'ok' | 'warning' | 'error',
-  message: string,
-  suggestion?: string,   // present on 'warning' and always on 'error'
-  details: {
-    occupied: number[],
-    total: number
-  },
-  durationMs: number
+{
+  occupied: number[];
+  listeners: Array<{
+    port: number;
+    pid: number | null;
+    processName: string | null;
+    isTarget?: boolean;
+  }>;
+  total: number;
+  targetPort?: number;
+  targetOccupied?: boolean;
+  targetOwned?: boolean;
+  targetListener?: {
+    port: number;
+    pid: number | null;
+    processName: string | null;
+  };
+  targetProjectRoot?: string;
+  targetPid?: number | null;
+  targetCommandLine?: string | null;
 }
 ```
 
+## Status Rules
+
 | Status | Condition |
 |---|---|
-| `ok` | No listening TCP ports were detected |
-| `warning` | One or more listening TCP ports were detected |
-| `error` | Check failed (command execution, parse failure, etc.) — `suggestion` always present |
+| `ok` | No target port was provided and no listeners were found |
+| `ok` | Target port is available |
+| `ok` | Target port is occupied by the resolved target project |
+| `warning` | No target port was provided and one or more occupied ports were found |
+| `error` | Target port is occupied by another process |
 
----
+## Current Behavior
+
+- enumerates all listening TCP ports
+- sorts and deduplicates them
+- resolves process names for listeners
+- marks the selected target port in `listeners`
+- if a target port is occupied, tries to resolve the project behind that port
+
+If project resolution succeeds, the module treats that as a healthy "this is your target app" state.
 
 ## Edge Cases
 
 | Scenario | Behavior |
 |---|---|
-| No listening ports found | Returns `ok`, message: "No occupied TCP listening ports detected" |
-| One or more ports listening | Returns `warning`, all ports listed in `details.occupied` |
-| Duplicate ports in command output | Deduplicated before returning |
-| IPv4 and IPv6 listeners | Both are parsed and normalized to port numbers |
-
----
-
-## Failure Scenarios
-
-| Scenario | Behavior |
-|---|---|
-| Port listing command fails | `status: 'error'`, error message in `details.error`, `suggestion` provided |
-| Timeout | Handled by runner via `Promise.race` — returns error result with check name and timeout duration |
-
----
+| No listeners on machine | `ok`, "No occupied TCP listening ports detected" |
+| Same port appears more than once in command output | Deduplicated in `occupied` |
+| IPv4 and IPv6 listeners | Normalized to port numbers |
+| Port is occupied but process root cannot be resolved | Treated as a conflict for the target-port flow |
+| No `targetPort` provided | Module acts as a machine-state summary and may return `warning` |
 
 ## Implementation Notes
 
-- Calls `getListeningPorts(deps)` from `lib/utils/system.ts`
-- Sorts and deduplicates port numbers before returning them
-- Does not access `devguard.config.json` directly — config is passed in by the runner
-- Does not catch its own errors — top-level errors propagate to the runner's central handler
+- Uses `getListeningPortDetails()` from `lib/utils/system.ts`
+- Uses project resolution only when `targetPort` is present and occupied
+- Leaves timeout/error wrapping to `runAllChecks()`

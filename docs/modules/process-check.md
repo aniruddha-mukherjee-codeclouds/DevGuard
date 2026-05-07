@@ -2,77 +2,96 @@
 
 ## Purpose
 
-Checks whether configured background processes (e.g., `redis`, `docker`) are currently running on the host machine. Uses OS-appropriate commands selected by `lib/utils/system.ts` to list running processes.
+Check whether developer-selected background services are currently running on the host machine.
 
-Missing processes are treated as warnings by default — they are not fatal errors.
-
----
+This module is intentionally simple: it checks for process-name presence in the OS process list. It does not verify ports, health, or ownership by the target project.
 
 ## Inputs
 
-Receives the `DevGuardConfig` object. Relevant fields:
+Receives `DevGuardConfig`.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `processes` | `string[]` | `['redis', 'docker']` | Process names to look for |
-| `timeoutMs` | `number` | `4000` | Max allowed time (enforced by runner, not this check) |
+Relevant fields:
 
-The `exec` function from `child_process` is injected via a `deps` parameter to support unit testing without global mocks.
+| Field | Type | Meaning |
+|---|---|---|
+| `processes` | `string[]` | Process names selected in the UI or supplied through config |
 
----
+Dependency injection:
+
+- `exec`
+- `platform`
+
+## Current Product Usage
+
+In the dashboard, the user can:
+
+- choose from built-in process targets
+- add custom comma-separated names
+
+The selected values are sent to `/api/scan` and override config-driven process targets for that request.
+
+Built-in options currently include:
+
+- Docker
+- Redis
+- PostgreSQL
+- MySQL
+- MariaDB
+- MongoDB
+- SQL Server
+- Oracle DB
+- SQLite
+- Elasticsearch
+- OpenSearch
+- Kafka
+- Zookeeper
+- RabbitMQ
+- NATS
+- Memcached
+- MinIO
+- LocalStack
+- Vault
+- Consul
+- Keycloak
+- Meilisearch
+- Typesense
+- MailHog
+- Mailpit
+- Nginx
+- Apache
+- Traefik
+- Caddy
+- Selenium
 
 ## Outputs
 
+Typical details shape:
+
 ```ts
-CheckResult {
-  name: 'Process Check',
-  status: 'ok' | 'warning' | 'error',
-  message: string,
-  suggestion?: string,   // present on 'warning' (missing processes) and always on 'error'
-  details: {
-    running: string[],
-    missing: string[]
-  },
-  durationMs: number
+{
+  running: string[];
+  missing: string[];
+  error?: string;
 }
 ```
 
+## Status Rules
+
 | Status | Condition |
 |---|---|
-| `ok` | All configured processes are found running |
-| `warning` | One or more processes not found — not treated as fatal |
-| `error` | Command execution failed (non-zero exit, ENOENT, etc.) — `suggestion` always present |
+| `ok` | No processes were selected |
+| `ok` | All selected processes were found |
+| `warning` | One or more selected processes were not found |
+| `error` | Process listing command failed |
 
----
+## Matching Behavior
 
-## Edge Cases
+- Lowercase substring matching
+- `redis` can match `redis-server`
+- `docker` can match `Docker Desktop.exe` or related process output
 
-| Scenario | Behavior |
-|---|---|
-| `processes: []` | Returns `ok`, message: "No processes configured to check" |
-| All processes running | Returns `ok` |
-| Some processes missing | Returns `warning`, missing listed in `details.missing`, suggestion included |
-| Process name partial match (e.g., `redis` matches `redis-server`) | Intentional — substring match used |
-| Process name casing | Lowercase comparison on all platforms |
-| Windows | Uses `tasklist` command, filters output by process name |
-| macOS / Linux | Uses `ps aux`, filters by process name |
+## Notes
 
----
-
-## Failure Scenarios
-
-| Scenario | Behavior |
-|---|---|
-| `exec` returns non-zero exit code | `status: 'error'`, stderr in `details.error`, suggestion to check shell/PATH |
-| `exec` throws (`ENOENT`, etc.) | `status: 'error'`, error message in `details.error`, suggestion provided |
-| Timeout | Handled by runner via `Promise.race` — returns error result with check name and timeout duration |
-
----
-
-## Implementation Notes
-
-- `getRunningProcesses(deps)` in `lib/utils/system.ts` selects the correct command based on `process.platform` and executes it via the injected `exec`
-- This check contains no `if (process.platform === ...)` logic — all OS branching lives in `system.ts`
-- Tests mock the injected `exec` function to return controlled stdout/stderr without spawning real processes
-- Does not access `devguard.config.json` directly — config is passed in by the runner
-- Does not catch its own errors — top-level errors propagate to the runner's central handler
+- Windows uses `tasklist`
+- macOS and Linux use `ps aux`
+- This check does not answer "is this process on the chosen target port?"
