@@ -1,8 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
+  getListeningPortDetails,
   getListeningPorts,
   getListeningProcessId,
   getNodeVersion,
+  getProcessName,
   getProcessCommandLine,
   getRunningProcesses,
 } from '../../../lib/utils/system';
@@ -53,6 +55,45 @@ describe('getListeningProcessId', () => {
 
     const pid = await getListeningProcessId(3000, { exec: mockExec, platform: 'win32' });
     expect(pid).toBe(6140);
+  });
+});
+
+describe('getProcessName', () => {
+  it('returns a trimmed process name when available', async () => {
+    const mockExec = vi.fn().mockResolvedValue({
+      stdout: 'node\n',
+      stderr: '',
+    });
+
+    const processName = await getProcessName(6140, { exec: mockExec, platform: 'win32' });
+    expect(processName).toBe('node');
+  });
+});
+
+describe('getListeningPortDetails', () => {
+  it('returns listening port details with process names on Windows', async () => {
+    const mockExec = vi
+      .fn()
+      .mockResolvedValueOnce({
+        stdout: [
+          '  TCP    0.0.0.0:3000           0.0.0.0:0              LISTENING       6140',
+          '  TCP    0.0.0.0:5432           0.0.0.0:0              LISTENING       9000',
+        ].join('\n'),
+        stderr: '',
+      })
+      .mockResolvedValueOnce({
+        stdout: [
+          '"node.exe","6140","Console","1","12,000 K"',
+          '"postgres.exe","9000","Console","1","18,000 K"',
+        ].join('\n'),
+        stderr: '',
+      });
+
+    const details = await getListeningPortDetails({ exec: mockExec, platform: 'win32' });
+    expect(details).toEqual([
+      { port: 3000, pid: 6140, processName: 'node' },
+      { port: 5432, pid: 9000, processName: 'postgres' },
+    ]);
   });
 });
 

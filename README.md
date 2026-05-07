@@ -12,8 +12,8 @@ DevGuard Web runs four checks against your local environment and presents result
 |---|---|
 | **Port Check** | Which TCP ports are currently listening on your machine |
 | **Env Check** | Whether all keys from `.env.example` are present in the target project's `.env` files, optionally resolved from a target port |
-| **Node Check** | Whether your Node.js version satisfies the required semver range |
-| **Process Check** | Whether required background processes (e.g., Redis, Docker) are running |
+| **Node Check** | Whether your system Node.js version satisfies the target project's required version |
+| **Process Check** | Whether the developer-selected background processes are running |
 
 Each check returns a structured result with a status (`ok`, `warning`, or `error`), a human-readable message, optional details, and a suggestion when something is wrong.
 
@@ -43,7 +43,7 @@ npm install
 
 # 2. (Optional) Create a config file to override defaults
 cp devguard.config.example.json devguard.config.json
-# Edit devguard.config.json to set your processes, Node version, etc.
+# Edit devguard.config.json to set your timeout and any extra env keys.
 
 # 3. Start the development server
 npm run dev
@@ -66,11 +66,13 @@ If not present, all checks use hardcoded defaults. To override:
 ```json
 {
   "requiredEnvKeys": ["DATABASE_URL", "API_KEY"],
-  "requiredNodeVersion": ">=18.0.0",
-  "processes": ["redis", "docker"],
+  "processes": [],
   "timeoutMs": 4000
 }
 ```
+
+Node Check discovers the required version from the target project's `package.json` `engines.node`, `.nvmrc`, or `.node-version` instead of reading a version from DevGuard config.
+Process Check can be driven directly from the UI by selecting common developer services such as Docker, Redis, PostgreSQL, MySQL, MongoDB, Kafka, RabbitMQ, LocalStack, MailHog, Nginx, and more, plus any custom process names.
 
 ### `.env.example`
 

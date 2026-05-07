@@ -78,9 +78,9 @@ interface ScanResponse {
 
 interface DevGuardConfig {
   requiredEnvKeys: string[];    // default: []
-  requiredNodeVersion: string;  // default: '>=18.0.0' (semver range)
   processes: string[];          // default: ['redis', 'docker']
   timeoutMs: number;            // default: 4000
+  targetPort?: number;          // optional port used to resolve the target project
 }
 ```
 
@@ -150,7 +150,6 @@ Checks contain no `process.platform` branching. All platform logic is in `system
 // lib/constants/defaultConfig.ts
 export const defaultConfig: DevGuardConfig = {
   requiredEnvKeys: [],
-  requiredNodeVersion: '>=18.0.0',
   processes: ['redis', 'docker'],
   timeoutMs: 4000,
 };

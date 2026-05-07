@@ -19,8 +19,8 @@ The app is designed to run on localhost. It requires Node.js runtime (not Edge) 
 /lib/utils/system.ts             OS detection, cross-platform helpers (getRunningProcesses, getNodeVersion, getListeningPorts)
 /lib/checks/portCheck.ts         Lists occupied TCP listening ports from the OS
 /lib/checks/envCheck.ts          Reads .env.example, validates keys against .env/.env.local, optionally resolves project root from a target port
-/lib/checks/nodeCheck.ts         Compares Node version to required semver range
-/lib/checks/processCheck.ts      Checks if required processes are running via child_process
+/lib/checks/nodeCheck.ts         Compares system Node version to the target project's declared requirement
+/lib/checks/processCheck.ts      Checks whether the user-selected process targets are running via child_process
 /lib/core/registry.ts            Static array of all check modules { name, run }
 /lib/core/runAllChecks.ts        Loads config once, runs registry in parallel with timeout + error wrapping
 /app/api/scan/route.ts           GET /api/scan — calls runAllChecks, returns JSON
@@ -57,7 +57,7 @@ runAllChecks.ts
     ├── portCheck.run(config)      net module, cross-platform via system.ts
     ├── envCheck.run(config)       resolves target port to project root, then reads .env.example + project env files
     ├── nodeCheck.run(config)      getNodeVersion() helper + semver range check
-    └── processCheck.run(config)   exec (tasklist / ps aux) via system.ts
+    └── processCheck.run(config)   exec (tasklist / ps aux) via system.ts using user-selected process targets
     │
     ▼
 Each check returns CheckResult { name, status, message, suggestion?, details?, durationMs }

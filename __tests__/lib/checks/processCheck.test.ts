@@ -32,7 +32,10 @@ describe('processCheck', () => {
 
   it('returns error when exec fails', async () => {
     const mockExec = vi.fn().mockRejectedValue(new Error('exec failed'));
-    const result = await processCheck.run(defaultConfig, { exec: mockExec });
+    const result = await processCheck.run(
+      { ...defaultConfig, processes: ['redis'] },
+      { exec: mockExec }
+    );
     expect(result.status).toBe('error');
     expect(result.suggestion).toBeDefined();
   });

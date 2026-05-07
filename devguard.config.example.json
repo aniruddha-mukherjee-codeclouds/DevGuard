@@ -1,6 +1,5 @@
 {
   "requiredEnvKeys": ["DATABASE_URL", "API_KEY"],
-  "requiredNodeVersion": ">=18.0.0",
-  "processes": ["redis", "docker"],
+  "processes": [],
   "timeoutMs": 4000
 }
