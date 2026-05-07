@@ -64,6 +64,7 @@ DevGuard then tries to resolve the project running on that port and uses that pr
 - Each check has a compact summary card
 - Clicking `Show details` opens a centered modal instead of expanding the card inline
 - The modal backdrop blurs the page and the modal body scrolls independently
+- Long paths, command lines, and package source strings are wrapped inside cards and modals to avoid horizontal overflow
 
 ## Tech Stack
 

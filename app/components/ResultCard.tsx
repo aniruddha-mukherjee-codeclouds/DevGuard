@@ -98,9 +98,9 @@ function StatTile({
   };
 
   return (
-    <div className={`rounded-lg border px-3 py-2 ${toneStyles[tone]}`}>
+    <div className={`min-w-0 rounded-lg border px-3 py-2 ${toneStyles[tone]}`}>
       <p className="text-[11px] uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-1 text-sm">{value}</p>
+      <p className="mt-1 break-words text-sm [overflow-wrap:anywhere]">{value}</p>
     </div>
   );
 }
@@ -124,14 +124,14 @@ function TokenList({
   };
 
   return (
-    <div className={`rounded-lg border p-3 ${toneStyles[tone]}`}>
+    <div className={`min-w-0 rounded-lg border p-3 ${toneStyles[tone]}`}>
       <p className="text-[11px] uppercase tracking-wide text-gray-500">{label}</p>
       {items.length > 0 ? (
         <div className="mt-2 flex flex-wrap gap-2">
           {items.map((item) => (
             <span
               key={item}
-              className="rounded-md border border-current/20 bg-black/20 px-2 py-1 text-xs"
+              className="max-w-full break-all rounded-md border border-current/20 bg-black/20 px-2 py-1 text-xs"
             >
               {item}
             </span>
@@ -146,9 +146,13 @@ function TokenList({
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-[11px] uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="text-sm text-gray-200 sm:text-right">{value}</p>
+    <div className="min-w-0 rounded-lg border border-gray-800 bg-gray-950 px-3 py-2">
+      <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <p className="shrink-0 text-[11px] uppercase tracking-wide text-gray-500">{label}</p>
+        <p className="min-w-0 break-words text-sm text-gray-200 sm:max-w-[70%] sm:text-right [overflow-wrap:anywhere]">
+          {value}
+        </p>
+      </div>
     </div>
   );
 }
@@ -191,24 +195,24 @@ function renderPortDetails(details: PortCheckDetails) {
       )}
       {details.targetCommandLine && <DetailRow label="Target Command" value={details.targetCommandLine} />}
 
-      <div className="rounded-lg border border-gray-800 bg-gray-950 p-3">
+      <div className="min-w-0 rounded-lg border border-gray-800 bg-gray-950 p-3">
         <p className="text-[11px] uppercase tracking-wide text-gray-500">Services By Port</p>
         <div className="mt-2 space-y-2">
           {details.listeners.length > 0 ? (
             details.listeners.map((listener) => (
               <div
                 key={`${listener.port}-${listener.pid ?? 'none'}`}
-                className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm ${
+                className={`flex min-w-0 flex-col gap-2 rounded-lg border px-3 py-2 text-sm sm:flex-row sm:items-start sm:justify-between ${
                   listener.isTarget
                     ? 'border-indigo-700 bg-indigo-950/40 text-indigo-100'
                     : 'border-gray-800 bg-gray-900 text-gray-200'
                 }`}
               >
-                <span className="font-mono">
+                <span className="shrink-0 font-mono">
                   {listener.port}
                   {listener.isTarget ? ' target' : ''}
                 </span>
-                <span className="truncate text-right text-gray-300">
+                <span className="min-w-0 break-words text-left text-gray-300 sm:max-w-[70%] sm:text-right [overflow-wrap:anywhere]">
                   {listener.processName ?? 'Unknown process'}
                   {listener.pid !== null ? ` (PID ${listener.pid})` : ''}
                 </span>
@@ -377,7 +381,7 @@ export function ResultCard({ result }: { result: CheckResult }) {
   }
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900/95 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.22)]">
+    <div className="min-w-0 rounded-xl border border-gray-800 bg-gray-900/95 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.22)]">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <StatusBadge status={result.status} />
@@ -388,7 +392,9 @@ export function ResultCard({ result }: { result: CheckResult }) {
         </span>
       </div>
 
-      <p className="mt-3 text-sm leading-6 text-gray-300">{result.message}</p>
+      <p className="mt-3 break-words text-sm leading-6 text-gray-300 [overflow-wrap:anywhere]">
+        {result.message}
+      </p>
 
       {hasMore && (
         <button
@@ -418,7 +424,7 @@ export function ResultCard({ result }: { result: CheckResult }) {
                   <StatusBadge status={result.status} />
                   <h2
                     id={`details-title-${result.name}`}
-                    className="text-lg font-semibold text-gray-100"
+                    className="min-w-0 break-words text-lg font-semibold text-gray-100 [overflow-wrap:anywhere]"
                   >
                     {result.name}
                   </h2>
@@ -426,7 +432,9 @@ export function ResultCard({ result }: { result: CheckResult }) {
                     {result.durationMs}ms
                   </span>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-gray-300">{result.message}</p>
+                <p className="mt-3 break-words text-sm leading-6 text-gray-300 [overflow-wrap:anywhere]">
+                  {result.message}
+                </p>
               </div>
 
               <button
@@ -438,10 +446,10 @@ export function ResultCard({ result }: { result: CheckResult }) {
               </button>
             </div>
 
-            <div className="overflow-y-auto px-5 py-4 sm:px-6 sm:py-5">
+            <div className="overflow-x-hidden overflow-y-auto px-5 py-4 sm:px-6 sm:py-5">
               <div className="space-y-4">
                 {result.suggestion && (
-                  <div className="rounded-lg border border-yellow-900 bg-yellow-950/40 px-3 py-2 text-sm text-yellow-100">
+                  <div className="rounded-lg border border-yellow-900 bg-yellow-950/40 px-3 py-2 text-sm text-yellow-100 [overflow-wrap:anywhere]">
                     {result.suggestion}
                   </div>
                 )}

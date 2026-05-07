@@ -192,6 +192,7 @@ The current dashboard is intentionally lightweight and local-tool oriented:
 - overall summary bar
 - two-column result grid on larger screens
 - modal-based detail views with scrollable content and blurred backdrop
+- overflow-safe text rendering for long paths, command lines, and dependency source strings
 
 ## Tradeoffs
 
