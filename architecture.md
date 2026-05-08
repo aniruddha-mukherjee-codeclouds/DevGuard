@@ -2,204 +2,211 @@
 
 ## Overview
 
-DevGuard Web is a local developer environment inspector built with Next.js. The UI and API layer live in the App Router, while all inspection logic lives in framework-agnostic modules under `lib`.
+DevGuard Web is a local developer environment intelligence dashboard built with Next.js. It keeps thin API routes in the App Router and places product logic in framework-agnostic modules under `lib`.
 
-The project currently revolves around a target-app workflow:
+The platform is organized into four product sections:
 
-- the user enters a target port in the dashboard
-- DevGuard resolves the process listening on that port
-- DevGuard tries to infer the target project root from that process command line
-- Env Check and Node Check use that resolved project as their inspection target
+1. Inspector (existing)
+2. Project Risks (new, renamed from Vulnerabilities)
+3. Scan History (new)
+4. Environment Settings (new)
 
-Port Check and Process Check still inspect the current machine state, but they also incorporate the user-supplied target port when present.
+The Inspector remains the execution engine for runtime checks. The new sections provide interpretation, continuity, and customization of local workflows without introducing cloud services, databases, or account systems.
+
+## Core Principles (Unchanged)
+
+- Thin API routes
+- Pure logic in `lib`
+- Cross-platform system inspection through explicit utilities
+- Local-first persistence and behavior
+- No overengineering or plugin architecture
+- No runtime magic discovery systems
+- Explicit, testable data flow
 
 ## High-Level Design
 
 ```txt
-Browser
-  -> GET /api/scan?targetPort=3000&processes=redis,docker
+Browser UI (App Router)
+  -> Section navigation (Inspector / Project Risks / Scan History / Environment Settings)
+  -> GET /api/scan?targetPort=...&processes=...
   -> app/api/scan/route.ts
   -> lib/core/runAllChecks.ts
-  -> registry of checks
-     - portCheck
-     - envCheck
-     - nodeCheck
-     - processCheck
-  -> JSON response
-  -> app/page.tsx summary cards
-  -> app/components/ResultCard.tsx modal details
+  -> lib/core/registry.ts (explicit ordered checks)
+  -> Check results + metadata
+  -> UI renders:
+     - Inspector cards + modal details
+     - Project Risks summary (derived locally)
+     - Scan History list (localStorage)
+     - Environment Settings form (localStorage)
 ```
+
+## Feature Boundaries
+
+### Inspector
+
+- Purpose: run machine/project readiness checks.
+- Source of truth: live system state and resolved target project.
+- Persistence: none required for check execution itself.
+
+### Project Risks
+
+- Purpose: detect lightweight local operational risks.
+- Input: latest Inspector result + project metadata from local files.
+- Output: warnings with rationale and remediation hints.
+- Explicitly not a CVE scanner, not `npm audit`, not external security intelligence.
+
+### Scan History
+
+- Purpose: retain recent scan snapshots for local comparison.
+- Persistence: `localStorage` only.
+- Retention: latest 20 entries, newest first.
+
+### Environment Settings
+
+- Purpose: persist user preferences for scan behavior and UI defaults.
+- Persistence: `localStorage` only.
+- Scope: single-browser, single-machine preferences.
 
 ## Responsibilities By Layer
 
-### App Layer
+### App Layer (`app/*`)
 
-- `app/page.tsx`
-  - collects `targetPort`
-  - collects selected process targets
-  - calls `/api/scan`
-  - renders overall status and result cards
+- Render section shells and interactions.
+- Trigger scan execution through `/api/scan`.
+- Read/write localStorage via dedicated client-side modules.
+- Map domain results to visual components.
 
-- `app/components/ResultCard.tsx`
-  - renders human-readable details for each check
-  - opens details in a centered modal
-  - avoids raw JSON output in the UI
+### API Layer (`app/api/*`)
 
-- `app/api/scan/route.ts`
-  - parses `targetPort`
-  - parses `processes`
-  - passes request-driven overrides to the runner
+- Parse query params.
+- Pass explicit overrides to core runner.
+- Return typed JSON only.
+- Keep API routes free of business logic.
 
-### Core Layer
+### Core Layer (`lib/core/*`)
 
-- `lib/core/registry.ts`
-  - static ordered array of checks
+- Keep explicit check registry ordering.
+- Run checks with timeout guards and isolation.
+- Derive overall statuses.
+- Provide stable response shape for UI and history capture.
 
-- `lib/core/runAllChecks.ts`
-  - loads optional config once
-  - applies request-level overrides
-  - runs checks in parallel
-  - wraps each check with a timeout
-  - isolates failures into per-check error results
-  - derives `overallStatus`
+### Checks Layer (`lib/checks/*`)
 
-### Check Layer
+- Inspector checks remain independent modules:
+  - `portCheck`
+  - `envCheck`
+  - `nodeCheck`
+  - `processCheck`
+- Planned expansion:
+  - `projectRiskCheck` as a dedicated non-security operational check module.
 
-- `lib/checks/portCheck.ts`
-  - enumerates listening ports
-  - marks the chosen target port
-  - reports whether the target port is free, owned by the target project, or occupied by another process
+### Utility Layer (`lib/utils/*`)
 
-- `lib/checks/envCheck.ts`
-  - resolves the target project root from port when possible
-  - reads `.env.example`
-  - validates `.env` and `.env.local`
-  - flags missing and placeholder-like values
+- `system.ts`: cross-platform process/port inspection.
+- `projectTarget.ts`: resolve target root from port/PID/command line.
+- `config.ts`: optional static config loading.
+- Planned additions:
+  - `historyStore.ts` (browser localStorage wrapper)
+  - `settingsStore.ts` (browser localStorage wrapper)
 
-- `lib/checks/nodeCheck.ts`
-  - resolves the target project root from port when possible
-  - compares the current Node version to project requirements
-  - falls back to framework/toolchain package metadata when no explicit version file exists
+## Planned Data Flow
 
-- `lib/checks/processCheck.ts`
-  - checks whether the developer-selected process names appear in the OS process list
+```txt
+1) Load app
+   -> read Environment Settings from localStorage
+   -> prefill target port/process defaults
+   -> optional auto-scan (if enabled)
 
-### Utility Layer
+2) Run scan
+   -> UI composes request
+   -> GET /api/scan
+   -> runAllChecks executes registry
+   -> response returned to Inspector UI
 
-- `lib/utils/system.ts`
-  - cross-platform process and port inspection
-  - OS-specific command execution lives here
+3) Persist snapshot
+   -> client creates ScanHistoryEntry
+   -> prepend to localStorage list
+   -> trim to latest 20
 
-- `lib/utils/projectTarget.ts`
-  - resolves a port to a PID
-  - resolves a PID to a command line
-  - infers a likely project root from command-line paths
+4) Compute Project Risks
+   -> evaluate rules against latest scan + local project files
+   -> show risk cards and actionable hints
 
-- `lib/utils/config.ts`
-  - reads optional `devguard.config.json`
-  - merges it with defaults
+5) History interactions
+   -> list scans newest-first
+   -> open detail snapshot
+   -> clear all
+   -> export JSON
+```
 
-## Current Config Model
+## Local Persistence Strategy
 
-`DevGuardConfig` currently contains:
+Persistence is intentionally split:
+
+- `devguard.config.json` (optional file): project-level defaults and static check config.
+- `localStorage`: user-level interaction state and lightweight history.
+
+Why this split:
+
+- file config is versionable and team-visible.
+- localStorage is immediate, zero-setup, and local-user specific.
+- no database lifecycle burden.
+- no cloud or account coupling.
+
+Planned localStorage keys:
+
+- `devguard:settings:v1`
+- `devguard:scan-history:v1`
+
+## Proposed Data Contracts (Planning)
+
+### Environment Settings
 
 ```ts
-interface DevGuardConfig {
-  requiredEnvKeys: string[];
-  processes: string[];
+interface EnvironmentSettings {
+  defaultTargetPort: number | null;
+  defaultProcesses: string[];
   timeoutMs: number;
-  targetPort?: number;
+  autoScanOnLoad: boolean;
+  theme: 'dark' | 'system';
 }
 ```
 
-Important details:
+### Scan History Entry
 
-- `targetPort` is usually provided at request time from the dashboard
-- `processes` may come from the optional config file, but the UI selection can override it
-- Node requirements are not read from config
-
-## Current Data Flow
-
-```txt
-User enters target port and process targets
-  -> HomePage builds query params
-  -> GET /api/scan
-  -> route.ts parses query params
-  -> runAllChecks({ configOverrides })
-  -> loadConfig()
-  -> merge defaults + file config + request overrides
-  -> run registry in parallel with Promise.race timeout guards
-  -> return ScanResponse
-  -> UI renders cards
-  -> Details open in a modal
+```ts
+interface ScanHistoryEntry {
+  id: string;
+  timestamp: string;
+  overallStatus: 'ok' | 'warning' | 'error';
+  targetPort: number | null;
+  selectedProcesses: string[];
+  durationMsTotal: number;
+  results: Array<{
+    name: string;
+    status: 'ok' | 'warning' | 'error';
+    message: string;
+    durationMs: number;
+  }>;
+}
 ```
 
-## Status Semantics
+## Tradeoffs and Rationale
 
-### Overall Status
-
-- `error` if any check returns `error`
-- `warning` if no errors but at least one warning exists
-- `ok` otherwise
-
-### Per-Check Status
-
-- Port Check:
-  - `ok` for free target port
-  - `ok` for target port already owned by the resolved target project
-  - `error` for target port occupied by another process
-  - `warning` only in the no-target broad machine-state case when occupied ports are found
-
-- Env Check:
-  - `ok` when required keys are present and not placeholder-like
-  - `warning` when target resolution fails, `.env.example` is missing, or no env files are found
-  - `error` for missing keys, placeholder values, or file read failures
-
-- Node Check:
-  - `ok` when current Node satisfies explicit or inferred project requirement
-  - `warning` when no usable requirement can be found or the target project cannot be resolved
-  - `error` for incompatibility, malformed version metadata, or metadata read failures
-
-- Process Check:
-  - `ok` when every selected process is found
-  - `warning` when some selected processes are missing
-  - `error` when process listing fails
-
-## API
-
-### `GET /api/scan`
-
-Query params:
-
-- `targetPort`
-- `processes`
-
-Example:
-
-```txt
-/api/scan?targetPort=3000&processes=redis,docker
-```
-
-The route runs on `runtime = 'nodejs'`.
-
-## UI Model
-
-The current dashboard is intentionally lightweight and local-tool oriented:
-
-- top control row for target port and scan action
-- process selection grid with built-in service presets
-- custom process input
-- overall summary bar
-- two-column result grid on larger screens
-- modal-based detail views with scrollable content and blurred backdrop
-- overflow-safe text rendering for long paths, command lines, and dependency source strings
-
-## Tradeoffs
-
-| Decision | Current Choice | Why |
+| Decision | Choice | Why |
 |---|---|---|
-| Target discovery | Resolve project from port | Matches how developers think about running local apps |
-| Node compatibility | Explicit files first, framework fallback second | Useful even when projects omit `.nvmrc` or `engines.node` |
-| Port ownership | Treat target-project ownership as healthy | More developer-friendly than flagging your own running app as a conflict |
-| Process selection | UI-driven | Different projects care about different dependencies |
-| Detail rendering | Custom UI + modal | Easier to read than raw JSON and does not disturb grid layout |
+| Risks scope | Operational risk only | Useful signal without pretending to be security tooling |
+| History storage | `localStorage` only | Zero infra, fast UX, aligned with local-first goals |
+| Settings storage | `localStorage` only | User preference data does not need backend complexity |
+| Module discovery | Explicit imports/registry | Predictable behavior and easier testability |
+| Persistence limit | 20 scan entries | Prevents storage bloat while retaining recent context |
+
+## Implementation Boundaries for Next Phase
+
+- No database, ORM, or external persistence.
+- No auth/accounts.
+- No external vulnerability feeds/APIs.
+- No plugin runtime system.
+- No hidden background daemons.
+
+This keeps DevGuard Web practical, understandable, and maintainable for local developer workflows.
