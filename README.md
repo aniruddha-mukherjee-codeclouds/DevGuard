@@ -1,137 +1,72 @@
 # DevGuard Web
 
-## What It Is
+## What It Does
+DevGuard Web is a local developer environment intelligence dashboard that helps you quickly verify whether a project is ready to run. It checks ports, env setup, Node compatibility, process dependencies, and local operational risks from one UI.
 
-DevGuard Web is a local developer environment intelligence dashboard built with Next.js.
-
-It helps answer:
-
-`Is my local project environment healthy, consistent, and ready to work with right now?`
-
-## Current + Planned Sections
-
-1. Inspector
-2. Project Risks
-3. Scan History
-4. Environment Settings
-
-Inspector is already working today. The other sections are planned and documented for implementation.
-
-## Local-First Philosophy
-
-DevGuard is intentionally local-first:
-
-- checks run against your local machine and local project files
-- no cloud dependency required for core workflows
-- no account creation or sync requirements
-- no mandatory remote APIs
-- lightweight local persistence only (`localStorage`)
-
-Why this matters:
-
-- fast feedback loops
-- no infrastructure overhead
-- clear, inspectable behavior
-- privacy by default for local environment data
-
-## Feature Summary
-
-### Inspector (Existing)
-
-- Target-port-driven project inspection
-- Port availability and ownership checks
-- `.env` readiness checks
-- Node version compatibility checks
-- Selected process presence checks
-- Modal-based check details
-
-### Project Risks (Planned)
-
-Operational risk detection for common local project issues such as:
-
-- missing or conflicting lockfiles
-- suspicious placeholder env values
-- `.env` or `node_modules` gitignore problems
-- framework/tooling version mismatch signals
-- oversized dependency footprint warnings
-
-Not a CVE scanner. Not an `npm audit` replacement.
-
-### Scan History (Planned)
-
-- Stores latest 20 scans in `localStorage`
-- Newest-first timeline
-- Clear history action
-- Export JSON action
-
-### Environment Settings (Planned)
-
-- default target port
-- default process list
-- timeout duration
-- auto-scan on load
-- optional theme preference
+## Why I Built It
+Local setup issues are usually easy to fix but painful to diagnose repeatedly. I built this to reduce startup friction by showing the most common readiness and hygiene problems in one place.
 
 ## Tech Stack
-
 - TypeScript
-- Next.js 14 App Router
+- Next.js 14 (App Router)
 - React 18
 - Tailwind CSS
 - Vitest
-- `semver`
-- Node.js runtime APIs for process and port inspection
+- semver
+- Node.js runtime APIs for local process/port inspection
 
 ## How to Run
-
-1. Clone the repository
+1. Clone the repository.
 2. Install dependencies:
-
-```bash
-npm install
-```
-
-3. Start development:
-
-```bash
-npm run dev
-```
-
-4. Open `http://localhost:3000`
+   ```bash
+   npm install
+   ```
+3. Start the app:
+   ```bash
+   npm run dev
+   ```
+4. Open `http://localhost:3000` (or the next available port shown in terminal).
+5. Use **Inspector** to run a scan, then review **Project Risks**, **Scan History**, and **Environment Settings**.
 
 Optional:
-
-- Run tests: `npm run test`
-- Build check: `npm run build`
-
-## Architecture Snapshot
-
-- App UI + API in Next.js App Router
-- Thin route handlers
-- Pure inspection logic under `lib`
-- Explicit check registry
-- Cross-platform system utilities in `lib/utils/system.ts`
-
-See full architecture details in `architecture.md`.
-
-## Screenshots
-
-- `![Inspector Dashboard](docs/assets/screenshots/inspector-placeholder.png)`
-- `![Project Risks](docs/assets/screenshots/project-risks-placeholder.png)`
-- `![Scan History](docs/assets/screenshots/scan-history-placeholder.png)`
-- `![Environment Settings](docs/assets/screenshots/environment-settings-placeholder.png)`
-
-(Placeholders only; replace with real captures during implementation rollout.)
-
-## Upcoming Features
-
-- Project Risks module implementation (operational risk checks)
-- Scan History UI + local persistence lifecycle
-- Environment Settings UI + validation and defaults
-- Cross-section navigation polish and empty-state handling
-- Additional Vitest coverage for local persistence flows
+- Run tests:
+  ```bash
+  npm run test
+  ```
+- Build check:
+  ```bash
+  npm run build
+  ```
 
 ## AI Tools Used
-
 - Claude
 - Codex
+- Stitch with Google
+
+## What AI Got Right
+- Helped scaffold a clean Next.js structure with most business logic kept in `/lib`.
+- Accelerated implementation of check modules and result rendering patterns.
+- Made iterative UI refactors faster while preserving existing behavior.
+
+## What I Had to Fix
+- Port conflict behavior had to be redesigned to use real OS-level listener detection instead of static assumptions.
+- Env validation initially targeted the scanner process env, so I rewired it to inspect target project `.env` files.
+- Project Risks had a false positive on `/node_modules` in `.gitignore`; I fixed matcher logic and added regression tests.
+
+## What I Learned About Vibe Coding
+- AI is strongest when the architecture is explicit and constraints are clear.
+- Fast generation is useful, but correctness still depends on deliberate review and testing.
+- The best workflow is treating AI outputs as strong drafts, then validating with real runtime behavior and test coverage.
+
+## Screenshots / Demo
+### Inspector (Current Fresh)
+![Inspector - Current](docs/assets/screenshots/inspecor-section.jpg)
+
+### Project Risks
+![Project Risks](docs/assets/screenshots/project-risks-section.jpg)
+
+### Scan History
+![Scan History](docs/assets/screenshots/scan-history-section.jpg)
+
+### Environment Settings
+![Environment Settings](docs/assets/screenshots/environment-settings-section.jpg)
