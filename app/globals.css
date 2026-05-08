@@ -1,3 +1,37 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --font-geist: 'Trebuchet MS', 'Segoe UI', 'Avenir Next', sans-serif;
+  --font-jetbrains-mono: 'Cascadia Mono', 'Consolas', 'SFMono-Regular', 'Courier New', monospace;
+}
+
+body {
+  font-family: var(--font-geist), sans-serif;
+  background:
+    radial-gradient(circle at 20% -10%, rgba(114, 255, 112, 0.14), transparent 40%),
+    radial-gradient(circle at 100% 0, rgba(255, 186, 67, 0.12), transparent 35%),
+    #0c160a;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0c160a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2d382a;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3b4b37;
+}

@@ -91,15 +91,15 @@ function StatTile({
   tone?: 'default' | 'success' | 'warning' | 'danger';
 }) {
   const toneStyles = {
-    default: 'border-gray-800 bg-gray-950 text-gray-100',
-    success: 'border-green-900 bg-green-950/40 text-green-200',
-    warning: 'border-yellow-900 bg-yellow-950/40 text-yellow-200',
-    danger: 'border-red-900 bg-red-950/40 text-red-200',
+    default: 'border-[#3b4b37] bg-[#141e12] text-[#dae6d2]',
+    success: 'border-[#1f5324] bg-[#133918]/40 text-[#72ff70]',
+    warning: 'border-[#7a5313] bg-[#5d3c0a]/40 text-[#ffd393]',
+    danger: 'border-[#c43b46] bg-[#93000a]/40 text-[#ffdad6]',
   };
 
   return (
     <div className={`min-w-0 rounded-lg border px-3 py-2 ${toneStyles[tone]}`}>
-      <p className="text-[11px] uppercase tracking-wide text-gray-500">{label}</p>
+      <p className="text-[11px] uppercase tracking-wide text-[#84967e]">{label}</p>
       <p className="mt-1 break-words text-sm [overflow-wrap:anywhere]">{value}</p>
     </div>
   );
@@ -117,28 +117,25 @@ function TokenList({
   tone?: 'default' | 'success' | 'warning' | 'danger';
 }) {
   const toneStyles = {
-    default: 'border-gray-800 bg-gray-950 text-gray-100',
-    success: 'border-green-900 bg-green-950/40 text-green-200',
-    warning: 'border-yellow-900 bg-yellow-950/40 text-yellow-200',
-    danger: 'border-red-900 bg-red-950/40 text-red-200',
+    default: 'border-[#3b4b37] bg-[#141e12] text-[#dae6d2]',
+    success: 'border-[#1f5324] bg-[#133918]/40 text-[#72ff70]',
+    warning: 'border-[#7a5313] bg-[#5d3c0a]/40 text-[#ffd393]',
+    danger: 'border-[#c43b46] bg-[#93000a]/40 text-[#ffdad6]',
   };
 
   return (
     <div className={`min-w-0 rounded-lg border p-3 ${toneStyles[tone]}`}>
-      <p className="text-[11px] uppercase tracking-wide text-gray-500">{label}</p>
+      <p className="text-[11px] uppercase tracking-wide text-[#84967e]">{label}</p>
       {items.length > 0 ? (
         <div className="mt-2 flex flex-wrap gap-2">
           {items.map((item) => (
-            <span
-              key={item}
-              className="max-w-full break-all rounded-md border border-current/20 bg-black/20 px-2 py-1 text-xs"
-            >
+            <span key={item} className="max-w-full break-all rounded-sm border border-current/20 bg-black/20 px-2 py-1 text-xs">
               {item}
             </span>
           ))}
         </div>
       ) : (
-        <p className="mt-2 text-sm text-gray-400">{emptyLabel}</p>
+        <p className="mt-2 text-sm text-[#84967e]">{emptyLabel}</p>
       )}
     </div>
   );
@@ -146,10 +143,10 @@ function TokenList({
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-lg border border-gray-800 bg-gray-950 px-3 py-2">
+    <div className="min-w-0 rounded-sm border border-[#3b4b37] bg-[#141e12] px-3 py-2">
       <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <p className="shrink-0 text-[11px] uppercase tracking-wide text-gray-500">{label}</p>
-        <p className="min-w-0 break-words text-sm text-gray-200 sm:max-w-[70%] sm:text-right [overflow-wrap:anywhere]">
+        <p className="shrink-0 text-[11px] uppercase tracking-wide text-[#84967e]">{label}</p>
+        <p className="min-w-0 break-words text-sm text-[#dae6d2] sm:max-w-[70%] sm:text-right [overflow-wrap:anywhere]">
           {value}
         </p>
       </div>
@@ -195,8 +192,8 @@ function renderPortDetails(details: PortCheckDetails) {
       )}
       {details.targetCommandLine && <DetailRow label="Target Command" value={details.targetCommandLine} />}
 
-      <div className="min-w-0 rounded-lg border border-gray-800 bg-gray-950 p-3">
-        <p className="text-[11px] uppercase tracking-wide text-gray-500">Services By Port</p>
+      <div className="min-w-0 rounded-sm border border-[#3b4b37] bg-[#141e12] p-3">
+        <p className="text-[11px] uppercase tracking-wide text-[#84967e]">Services By Port</p>
         <div className="mt-2 space-y-2">
           {details.listeners.length > 0 ? (
             details.listeners.map((listener) => (
@@ -204,22 +201,22 @@ function renderPortDetails(details: PortCheckDetails) {
                 key={`${listener.port}-${listener.pid ?? 'none'}`}
                 className={`flex min-w-0 flex-col gap-2 rounded-lg border px-3 py-2 text-sm sm:flex-row sm:items-start sm:justify-between ${
                   listener.isTarget
-                    ? 'border-indigo-700 bg-indigo-950/40 text-indigo-100'
-                    : 'border-gray-800 bg-gray-900 text-gray-200'
+                    ? 'border-[#3b358a] bg-[#1c1a3b] text-[#dae6d2]'
+                    : 'border-[#3b4b37] bg-[#182216] text-[#dae6d2]'
                 }`}
               >
                 <span className="shrink-0 font-mono">
                   {listener.port}
                   {listener.isTarget ? ' target' : ''}
                 </span>
-                <span className="min-w-0 break-words text-left text-gray-300 sm:max-w-[70%] sm:text-right [overflow-wrap:anywhere]">
+                <span className="min-w-0 break-words text-left text-[#b9ccb2] sm:max-w-[70%] sm:text-right [overflow-wrap:anywhere]">
                   {listener.processName ?? 'Unknown process'}
                   {listener.pid !== null ? ` (PID ${listener.pid})` : ''}
                 </span>
               </div>
             ))
           ) : (
-            <p className="text-sm text-gray-400">No active listeners found.</p>
+            <p className="text-sm text-[#84967e]">No active listeners found.</p>
           )}
         </div>
       </div>
@@ -381,18 +378,18 @@ export function ResultCard({ result }: { result: CheckResult }) {
   }
 
   return (
-    <div className="min-w-0 rounded-xl border border-gray-800 bg-gray-900/95 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.22)]">
+    <div className="min-w-0 rounded-sm border border-[#3b4b37] bg-[#182216] p-5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <StatusBadge status={result.status} />
-          <span className="truncate font-medium text-gray-100">{result.name}</span>
+          <span className="truncate text-lg font-bold text-[#dae6d2]">{result.name}</span>
         </div>
-        <span className="shrink-0 rounded-full border border-gray-800 bg-gray-950 px-2 py-1 text-xs text-gray-400">
+        <span className="shrink-0 text-[11px] text-[#84967e]">
           {result.durationMs}ms
         </span>
       </div>
 
-      <p className="mt-3 break-words text-sm leading-6 text-gray-300 [overflow-wrap:anywhere]">
+      <p className="mt-3 break-words text-sm leading-6 text-[#b9ccb2] [overflow-wrap:anywhere]">
         {result.message}
       </p>
 
@@ -400,7 +397,7 @@ export function ResultCard({ result }: { result: CheckResult }) {
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="mt-3 text-xs font-medium uppercase tracking-wide text-gray-500 transition-colors hover:text-gray-300"
+          className="mt-3 text-[10px] font-medium uppercase tracking-[0.15em] text-[#b9ccb2] transition-colors hover:text-[#ebffe2]"
         >
           Show details
         </button>
@@ -408,31 +405,28 @@ export function ResultCard({ result }: { result: CheckResult }) {
 
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c160a]/45 px-4 py-6 backdrop-blur-[2px]"
           onClick={() => setIsModalOpen(false)}
         >
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={`details-title-${result.name}`}
-            className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-gray-800 bg-gray-900 shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
+            className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-sm border border-[#3b4b37] bg-[#182216] shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-gray-800 px-5 py-4 sm:px-6">
+            <div className="flex items-start justify-between gap-4 border-b border-[#3b4b37] px-5 py-4 sm:px-6">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
                   <StatusBadge status={result.status} />
-                  <h2
-                    id={`details-title-${result.name}`}
-                    className="min-w-0 break-words text-lg font-semibold text-gray-100 [overflow-wrap:anywhere]"
-                  >
+                  <h2 id={`details-title-${result.name}`} className="min-w-0 break-words text-lg font-semibold text-[#dae6d2] [overflow-wrap:anywhere]">
                     {result.name}
                   </h2>
-                  <span className="rounded-full border border-gray-800 bg-gray-950 px-2 py-1 text-xs text-gray-400">
+                  <span className="text-[11px] text-[#84967e]">
                     {result.durationMs}ms
                   </span>
                 </div>
-                <p className="mt-3 break-words text-sm leading-6 text-gray-300 [overflow-wrap:anywhere]">
+                <p className="mt-3 break-words text-sm leading-6 text-[#b9ccb2] [overflow-wrap:anywhere]">
                   {result.message}
                 </p>
               </div>
@@ -440,16 +434,17 @@ export function ResultCard({ result }: { result: CheckResult }) {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="shrink-0 rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-gray-300 transition-colors hover:border-gray-700 hover:text-white"
+                aria-label="Close modal"
+                className="shrink-0 rounded-sm border border-[#3b4b37] bg-[#141e12] px-3 py-1 text-lg leading-none text-[#dae6d2] transition-colors hover:border-[#84967e]"
               >
-                Close
+                ×
               </button>
             </div>
 
             <div className="overflow-x-hidden overflow-y-auto px-5 py-4 sm:px-6 sm:py-5">
               <div className="space-y-4">
                 {result.suggestion && (
-                  <div className="rounded-lg border border-yellow-900 bg-yellow-950/40 px-3 py-2 text-sm text-yellow-100 [overflow-wrap:anywhere]">
+                  <div className="rounded-sm border border-[#7a5313] bg-[#5d3c0a]/40 px-3 py-2 text-sm text-[#ffd393] [overflow-wrap:anywhere]">
                     {result.suggestion}
                   </div>
                 )}

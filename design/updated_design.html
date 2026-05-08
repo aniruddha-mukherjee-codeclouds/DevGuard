@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;family=Geist:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #0c160a;
+            color: #dae6d2;
+            -webkit-font-smoothing: antialiased;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0c160a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #182216;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2d382a;
+        }
+    </style>
+<!-- Include Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                "error-container": "#93000a",
+                "primary": "#ebffe2",
+                "secondary-container": "#fdaf00",
+                "inverse-primary": "#006e16",
+                "tertiary-fixed": "#ffdcbd",
+                "outline-variant": "#3b4b37",
+                "on-error-container": "#ffdad6",
+                "surface": "#0c160a",
+                "on-primary-fixed": "#002203",
+                "tertiary-fixed-dim": "#e7bf99",
+                "error": "#ffb4ab",
+                "on-surface": "#dae6d2",
+                "tertiary-container": "#ffd5ae",
+                "on-primary": "#003907",
+                "outline": "#84967e",
+                "secondary": "#ffd393",
+                "surface-container-low": "#141e12",
+                "surface-container": "#182216",
+                "tertiary": "#fff8f4",
+                "surface-container-lowest": "#071106",
+                "background": "#0c160a",
+                "primary-container": "#00ff41",
+                "on-surface-variant": "#b9ccb2",
+                "on-primary-container": "#007117",
+                "surface-tint": "#00e639",
+                "on-background": "#dae6d2",
+                "on-secondary": "#432c00",
+                "on-secondary-container": "#694600",
+                "surface-variant": "#2d382a",
+                "on-tertiary-fixed-variant": "#5d4124",
+                "on-error": "#690005",
+                "secondary-fixed-dim": "#ffba43",
+                "on-tertiary": "#442b10",
+                "secondary-fixed": "#ffddaf",
+                "surface-container-high": "#222d20",
+                "surface-container-highest": "#2d382a",
+                "primary-fixed-dim": "#00e639",
+                "on-tertiary-container": "#7a5b3c",
+                "on-secondary-fixed": "#281800",
+                "on-secondary-fixed-variant": "#614000",
+                "surface-dim": "#0c160a",
+                "surface-bright": "#313c2e",
+                "primary-fixed": "#72ff70",
+                "inverse-on-surface": "#283326",
+                "on-tertiary-fixed": "#2c1701",
+                "on-primary-fixed-variant": "#00530e",
+                "inverse-surface": "#dae6d2"
+              },
+              "borderRadius": {
+                "DEFAULT": "4px",
+                "lg": "8px",
+                "xl": "12px",
+                "full": "9999px"
+              },
+              "spacing": {
+                "sm": "8px",
+                "gutter": "12px",
+                "xl": "32px",
+                "unit": "4px",
+                "xs": "4px",
+                "lg": "24px",
+                "md": "16px"
+              },
+              "fontFamily": {
+                "ui-sans-sm": ["Geist"],
+                "display": ["Geist"],
+                "data-mono-lg": ["JetBrains Mono"],
+                "ui-sans-md": ["Geist"],
+                "ui-sans-lg": ["Geist"],
+                "data-mono-sm": ["JetBrains Mono"],
+                "data-mono-md": ["JetBrains Mono"]
+              },
+              "fontSize": {
+                "ui-sans-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                "display": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                "data-mono-lg": ["15px", {"lineHeight": "22px", "fontWeight": "500"}],
+                "ui-sans-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                "ui-sans-lg": ["16px", {"lineHeight": "24px", "fontWeight": "500"}],
+                "data-mono-sm": ["11px", {"lineHeight": "14px", "fontWeight": "400"}],
+                "data-mono-md": ["13px", {"lineHeight": "18px", "fontWeight": "400"}]
+              }
+            }
+          }
+        }
+    </script>
+</head>
+<body class="flex overflow-hidden">
+<!-- SideNavBar -->
+<aside class="flex flex-col h-screen w-64 border-r border-outline-variant bg-surface-container-low">
+<div class="px-md py-lg flex flex-col gap-xs">
+<div class="flex items-center gap-sm mb-lg">
+<div class="bg-primary-container p-1 rounded-sm">
+<span class="material-symbols-outlined text-on-primary-container text-ui-sans-lg" data-icon="terminal">terminal</span>
+</div>
+<div class="flex flex-col">
+<span class="font-display text-ui-sans-md font-bold text-primary">DEVGUARD</span>
+<span class="font-data-mono-sm text-[10px] text-on-surface-variant opacity-70 uppercase tracking-widest">v3.1.0-beta</span>
+</div>
+</div>
+<!-- Primary Nav Links -->
+<nav class="flex flex-col gap-xs">
+<a class="flex items-center gap-md bg-surface-container-highest text-primary border-r-2 border-primary py-sm px-md hover:bg-surface-container-high hover:text-primary transition-all translate-x-1 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-data-mono-sm text-data-mono-sm">Inspector</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant py-sm px-md hover:bg-surface-container-high hover:text-primary transition-all duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="security">security</span>
+<span class="font-data-mono-sm text-data-mono-sm">Vulnerabilities</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant py-sm px-md hover:bg-surface-container-high hover:text-primary transition-all duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-data-mono-sm text-data-mono-sm">Scan History</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant py-sm px-md hover:bg-surface-container-high hover:text-primary transition-all duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-data-mono-sm text-data-mono-sm">Environment Settings</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-md border-t border-outline-variant flex flex-col gap-sm">
+<div class="flex items-center gap-sm p-sm bg-surface-container-high rounded-sm">
+<div class="w-8 h-8 rounded-sm bg-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="person">person</span>
+</div>
+<div class="flex flex-col">
+<span class="font-ui-sans-sm text-ui-sans-sm font-bold text-on-surface">Developer</span>
+<span class="font-data-mono-sm text-data-mono-sm text-on-surface-variant">local@user</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Content Area -->
+<main class="flex-1 flex flex-col min-w-0 bg-surface overflow-y-auto">
+<!-- Top Header -->
+<header class="px-xl py-lg">
+<h1 class="font-display text-[32px] font-black text-on-surface">DevGuard Web</h1>
+<p class="font-ui-sans-md text-on-surface-variant">Developer environment inspector</p>
+</header>
+<div class="px-xl pb-xl flex flex-col gap-xl">
+<!-- Configuration Section -->
+<section class="flex flex-col gap-lg">
+<div class="flex flex-col gap-xs">
+<label class="font-data-mono-sm text-[11px] text-on-surface-variant uppercase tracking-widest font-bold">Env Target Port</label>
+<div class="flex gap-md">
+<input class="bg-surface-container border border-outline-variant text-on-surface font-data-mono-md text-data-mono-md px-md py-2 w-48 focus:border-primary focus:ring-0 outline-none transition-colors rounded-sm" type="text" value="3000"/>
+<button class="bg-[#5c4ae4] hover:bg-[#6c5af4] text-white font-data-mono-sm text-data-mono-sm font-bold px-lg h-10 transition-all rounded-sm flex items-center gap-sm">
+                        RUN SCAN
+                    </button>
+</div>
+</div>
+<!-- Process Targets Grid -->
+<div class="flex flex-col gap-sm">
+<label class="font-data-mono-sm text-[11px] text-on-surface-variant uppercase tracking-widest font-bold">Process Targets</label>
+<div class="grid grid-cols-3 gap-sm">
+<!-- Column 1 -->
+<div class="flex flex-col gap-sm">
+<button class="flex items-center px-md py-sm bg-[#1c1a3b] border border-[#3b358a] text-on-surface font-data-mono-sm text-data-mono-sm rounded-sm text-left">Docker</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">MySQL</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">SQL Server</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Elasticsearch</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Zookeeper</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Memcached</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Vault</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Meilisearch</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Mailpit</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Traefik</button>
+</div>
+<!-- Column 2 -->
+<div class="flex flex-col gap-sm">
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Redis</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">MariaDB</button>
+<button class="flex items-center px-md py-sm bg-[#1c1a3b] border border-[#3b358a] text-on-surface font-data-mono-sm text-data-mono-sm rounded-sm text-left">Oracle DB</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">OpenSearch</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">RabbitMQ</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">MinIO</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Consul</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Typesense</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Nginx</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Caddy</button>
+</div>
+<!-- Column 3 -->
+<div class="flex flex-col gap-sm">
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">PostgreSQL</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">MongoDB</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">SQLite</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Kafka</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">NATS</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">LocalStack</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Keycloak</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">MailHog</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Apache</button>
+<button class="flex items-center px-md py-sm bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono-sm text-data-mono-sm rounded-sm text-left hover:border-outline transition-colors">Selenium</button>
+</div>
+</div>
+</div>
+<!-- Custom Processes -->
+<div class="flex flex-col gap-xs">
+<label class="font-data-mono-sm text-[11px] text-on-surface-variant uppercase tracking-widest font-bold">Custom Processes</label>
+<input class="bg-surface-container border border-outline-variant text-on-surface font-data-mono-md text-data-mono-md px-md py-2 w-full focus:border-primary focus:ring-0 outline-none transition-colors rounded-sm" type="text" value="node"/>
+</div>
+</section>
+<!-- Scanning Status Bar -->
+<section class="bg-surface-container border border-outline-variant px-md py-sm rounded-sm flex items-center justify-between">
+<div class="flex items-center gap-md">
+<span class="font-data-mono-sm text-data-mono-sm text-on-surface-variant">Overall:</span>
+<span class="bg-[#5d3c0a] text-[#ffba43] font-data-mono-sm text-[10px] font-black px-2 py-[2px] rounded-sm">WARNING</span>
+</div>
+<span class="font-data-mono-sm text-data-mono-sm text-on-surface-variant opacity-60">10:43:45 AM</span>
+</section>
+<!-- Result Cards Grid -->
+<section class="grid grid-cols-2 gap-lg">
+<!-- Port Check -->
+<div class="bg-surface-container border border-outline-variant p-lg rounded-sm flex flex-col gap-md">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-md">
+<span class="bg-[#133918] text-[#00ff41] font-data-mono-sm text-[10px] font-black px-2 py-[2px] rounded-sm">OK</span>
+<h3 class="font-display text-ui-sans-lg font-bold text-on-surface">Port Check</h3>
+</div>
+<span class="font-data-mono-sm text-[11px] text-on-surface-variant opacity-60">1369ms</span>
+</div>
+<p class="font-ui-sans-sm text-on-surface-variant">Port 3000 is already in use by the target project</p>
+<button class="text-on-surface-variant hover:text-primary font-data-mono-sm text-[10px] uppercase tracking-widest text-left w-fit transition-colors">Show Details</button>
+</div>
+<!-- Env Check -->
+<div class="bg-surface-container border border-outline-variant p-lg rounded-sm flex flex-col gap-md">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-md">
+<span class="bg-[#133918] text-[#00ff41] font-data-mono-sm text-[10px] font-black px-2 py-[2px] rounded-sm">OK</span>
+<h3 class="font-display text-ui-sans-lg font-bold text-on-surface">Env Check</h3>
+</div>
+<span class="font-data-mono-sm text-[11px] text-on-surface-variant opacity-60">2072ms</span>
+</div>
+<p class="font-ui-sans-sm text-on-surface-variant">All 17 required keys are present in project env files</p>
+<button class="text-on-surface-variant hover:text-primary font-data-mono-sm text-[10px] uppercase tracking-widest text-left w-fit transition-colors">Show Details</button>
+</div>
+<!-- Node Check -->
+<div class="bg-surface-container border border-outline-variant p-lg rounded-sm flex flex-col gap-md">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-md">
+<span class="bg-[#133918] text-[#00ff41] font-data-mono-sm text-[10px] font-black px-2 py-[2px] rounded-sm">OK</span>
+<h3 class="font-display text-ui-sans-lg font-bold text-on-surface">Node Check</h3>
+</div>
+<span class="font-data-mono-sm text-[11px] text-on-surface-variant opacity-60">2056ms</span>
+</div>
+<p class="font-ui-sans-sm text-on-surface-variant">Node v25.6.0 satisfies &gt;=18.17.0 from next</p>
+<button class="text-on-surface-variant hover:text-primary font-data-mono-sm text-[10px] uppercase tracking-widest text-left w-fit transition-colors">Show Details</button>
+</div>
+<!-- Process Check -->
+<div class="bg-surface-container border border-outline-variant p-lg rounded-sm flex flex-col gap-md">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-md">
+<span class="bg-[#5d3c0a] text-[#ffba43] font-data-mono-sm text-[10px] font-black px-2 py-[2px] rounded-sm">WARNING</span>
+<h3 class="font-display text-ui-sans-lg font-bold text-on-surface">Process Check</h3>
+</div>
+<span class="font-data-mono-sm text-[11px] text-on-surface-variant opacity-60">1086ms</span>
+</div>
+<p class="font-ui-sans-sm text-on-surface-variant">2 of 3 configured processes not found</p>
+<button class="text-on-surface-variant hover:text-primary font-data-mono-sm text-[10px] uppercase tracking-widest text-left w-fit transition-colors">Show Details</button>
+</div>
+</section>
+</div>
+</main>
+</body></html>

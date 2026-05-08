@@ -1,151 +1,82 @@
 # DevGuard Web
 
-DevGuard Web is a local Next.js dashboard for checking whether a developer machine is ready to run a target project.
+## What It Does
 
-It inspects four things in one scan:
+DevGuard Web is a local developer environment inspector built with Next.js. It helps a developer quickly check whether a target project is ready to run by scanning ports, env setup, Node compatibility, and selected background processes from one dashboard.
 
-- `Port Check`: what ports are listening right now, what process owns them, and whether the chosen target port belongs to the target project or a conflicting process
-- `Env Check`: whether the target project's `.env` files satisfy `.env.example`
-- `Node Check`: whether the machine's Node version is compatible with the target project
-- `Process Check`: whether developer-selected background services are running
+## Why I Built It
 
-## Current Product Shape
-
-This project is no longer centered around a fixed list of configured ports or a hardcoded process list.
-
-The current workflow is:
-
-1. Start DevGuard locally
-2. Enter a target app port such as `3000`
-3. Select any supporting processes you care about
-4. Run the scan
-5. Review the results in modal detail views
-
-DevGuard then tries to resolve the project running on that port and uses that project as the inspection target for Env Check and Node Check.
-
-## What The Checks Mean
-
-### Port Check
-
-- Enumerates all listening TCP ports on the host OS
-- Shows `port -> process name -> pid`
-- If a target port is provided:
-  - returns `ok` when the port is free
-  - returns `ok` when the port is already in use by the resolved target project
-  - returns `error` when the port is occupied by some other process
-
-### Env Check
-
-- Resolves the target project from the selected port when possible
-- Reads that project's `.env.example`
-- Merges `.env` and `.env.local` from the target project
-- Reports missing keys, present keys, and placeholder-like values such as `changeme`
-
-### Node Check
-
-- Compares the machine's current Node version to the target project's requirement
-- Looks for an explicit requirement in:
-  - `package.json#engines.node`
-  - `.nvmrc`
-  - `.node-version`
-- If no explicit version file exists, it falls back to installed framework/tooling metadata such as:
-  - `node_modules/next/package.json#engines.node`
-  - `node_modules/vite/package.json#engines.node`
-
-### Process Check
-
-- Uses the processes selected in the UI
-- Checks whether matching process names are visible in the OS process list
-- Supports built-in options plus custom comma-separated names
-
-## UI Behavior
-
-- The dashboard is rendered in a two-column card layout on larger screens
-- Each check has a compact summary card
-- Clicking `Show details` opens a centered modal instead of expanding the card inline
-- The modal backdrop blurs the page and the modal body scrolls independently
-- Long paths, command lines, and package source strings are wrapped inside cards and modals to avoid horizontal overflow
+A lot of local setup issues are easy to diagnose but annoying to chase manually. Port conflicts, missing env keys, the wrong Node version, or a dependency like Redis not running can waste time before actual development even starts, so I built this to make that feedback visible in one place.
 
 ## Tech Stack
 
+- TypeScript
 - Next.js 14 App Router
 - React 18
-- TypeScript
 - Tailwind CSS
 - Vitest
 - `semver`
+- Node.js runtime APIs for process and port inspection
 
-## Run Locally
+## How to Run
+
+1. Clone the repository
+2. Install dependencies:
 
 ```bash
 npm install
+```
+
+3. Start the app:
+
+```bash
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+4. Open `http://localhost:3000`
+5. Enter the target app port, select any relevant process targets, and click `Run Scan`
 
-## Tests
+Optional:
 
-```bash
-npm run test
-npx tsc --noEmit
-```
+- Run tests with `npm run test`
+- Run typecheck with `npx tsc --noEmit`
+- You can also add an optional `devguard.config.json` if you want to override `requiredEnvKeys`, `processes`, or `timeoutMs`
 
-## Optional Config File
+## AI Tools Used
 
-DevGuard can still read an optional `devguard.config.json`, but the current product does not depend on it for the main workflow.
+- Claude
+- Codex
 
-Supported fields:
+Planned future addition:
 
-```json
-{
-  "requiredEnvKeys": ["DATABASE_URL", "API_KEY"],
-  "processes": [],
-  "timeoutMs": 4000
-}
-```
+- Google Stitch for improving and refining the UI in a future iteration
 
-Notes:
+## What AI Got Right
 
-- `targetPort` is supplied by the UI and API request, not by the config file
-- `processes` can be overridden by the UI selection
-- Node Check does not read a required Node version from config
+- Helped scaffold the initial Next.js structure and split the project cleanly between UI code and framework-agnostic check logic
+- Accelerated the test-driven buildout of the check modules and runner flow
+- Made it faster to iterate on the UI once the product direction became clearer
 
-## API
+## What I Had to Fix
 
-`GET /api/scan`
+- The original port-check behavior was not reliable enough for real developer workflows, so I changed it from a fixed configured-port check to dynamic OS-level port inspection
+- The early Env Check was validating DevGuard's own process environment, which was not very useful, so I redesigned it to inspect the target project's `.env` files instead
+- Node version checking had to be improved because not every project keeps `.nvmrc` or `engines.node`, so I added a fallback based on framework and toolchain package compatibility
+- The result details originally expanded inline and caused awkward layout shifts, so I moved them into a centered modal and then fixed multiple overflow issues for long paths and command strings
 
-Optional query params:
+## What I Learned About Vibe Coding
 
-- `targetPort=3000`
-- `processes=redis,docker,postgres`
+- AI is excellent for generating momentum, especially when the architecture is small enough to keep in your head and the feedback loop is fast
+- The most useful pattern is not accepting the first version blindly, but treating AI output like a strong draft that still needs product judgment
+- The better I got at giving precise constraints, the better the results became
+- The hardest part was not generating code, but making sure the behavior actually matched the real developer problem I wanted to solve
 
-Example:
+## Screenshots / Demo
 
-```txt
-/api/scan?targetPort=3000&processes=redis,docker
-```
+Current demo state:
 
-## Project Structure
+- Local Next.js dashboard
+- Modal-based check detail views
+- Target-port-driven project inspection flow
 
-```txt
-app/
-  api/scan/route.ts
-  components/
-  page.tsx
-lib/
-  checks/
-  constants/
-  core/
-  types/
-  utils/
-docs/
-  modules/
-  superpowers/
-```
-
-## Notes
-
-- DevGuard is designed for local use
-- API routes run on the Node.js runtime, not Edge
-- Target project resolution is best-effort and depends on what can be inferred from the process listening on the chosen port
+You can add screenshots or a short GIF here for submission.
